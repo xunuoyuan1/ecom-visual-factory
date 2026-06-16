@@ -1,0 +1,38 @@
+# 电商视觉生成系统（LangGraph 架构版）
+
+测试版 MVP，用于把产品图、客户参数和卖点转为 7 屏电商详情图 Prompt。
+
+## 当前范围
+
+- FastAPI 项目入口
+- LangGraph 流程构建
+- 缺少 LangGraph 依赖时的本地测试 runner
+- 产品 State 和 API Schema
+- 7 屏策略与 Prompt 生成
+- QA 检查与一次修复回路
+- 批量 SKU 入口结构
+
+## MVP 验收标准
+
+1. 单 SKU 可以生成 7 屏 Prompt。
+2. 信息不足时进入 AI 补全节点，补全字段带 `ai_inference` 来源。
+3. 信息充足时跳过补全，直接进入清洗。
+4. 每屏 Prompt 包含中文主标题、副标题、布局、光影、字体、情绪、2:3 竖版和产品 1:1 保真约束。
+5. QA 能识别高危问题并触发一次 Prompt 修复。
+6. 批量入口支持多个 SKU，单个 SKU 输出独立结果。
+
+## 本地测试
+
+当前 Codex 环境未安装 `fastapi`、`langgraph`、`pytest`，可先用 Python 标准库测试核心逻辑：
+
+```powershell
+& 'C:\Users\xunuo\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' -m unittest discover -s tests
+```
+
+生产或完整开发环境建议安装项目依赖后运行：
+
+```powershell
+pip install -e ".[dev]"
+pytest
+uvicorn app.main:app --reload
+```
