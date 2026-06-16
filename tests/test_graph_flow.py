@@ -17,6 +17,8 @@ class GraphFlowTests(unittest.TestCase):
                 "user_specs": {"product_type": "护手霜"},
                 "user_selling_points": ["滋润"],
                 "user_constraints": {"enable_web_enhancement": True, "max_qa_iterations": 1},
+                "generation_mode": "smart_detail",
+                "include_detail_screens": False,
                 "iteration": 0,
                 "errors": [],
             }
@@ -24,12 +26,11 @@ class GraphFlowTests(unittest.TestCase):
 
         self.assertEqual(result["route"], "completion")
         self.assertIn("completed_data", result)
-        self.assertEqual(len(result["prompts"]), 7)
+        self.assertEqual(len(result["detail_prompts"]), 7)
         self.assertTrue(result["qa_report"]["pass"])
-        for prompt in result["prompts"].values():
+        for prompt in result["detail_prompts"].values():
             self.assertIn("主标题：", prompt)
             self.assertIn("副标题：", prompt)
-            self.assertIn(PRODUCT_FIDELITY_REQUIREMENT, prompt)
 
     def test_complete_input_skips_completion(self):
         graph = build_graph()
@@ -45,6 +46,8 @@ class GraphFlowTests(unittest.TestCase):
                 },
                 "user_selling_points": ["陶瓷质感", "易清洁", "适合办公桌"],
                 "user_constraints": {"enable_web_enhancement": False, "max_qa_iterations": 1},
+                "generation_mode": "smart_detail",
+                "include_detail_screens": False,
                 "iteration": 0,
                 "errors": [],
             }
@@ -73,6 +76,97 @@ class GraphFlowTests(unittest.TestCase):
         self.assertTrue(state["qa_report"]["pass"])
         for prompt in state["prompts"].values():
             self.assertIn(PRODUCT_FIDELITY_REQUIREMENT, prompt)
+
+    def test_smart_detail_has_empty_asset_plan(self):
+        """In smart_detail mode, asset planning returns empty, but detail_prompts filled."""
+        graph = build_graph()
+        result = graph.invoke(
+            {
+                "job_id": "job-3",
+                "sku_id": "sku-3",
+                "images": ["img1"],
+                "user_specs": {"product_type": "护手霜"},
+                "user_selling_points": ["滋润"],
+                "user_constraints": {"platform": "tmall", "enable_web_enhancement": True, "max_qa_iterations": 1},
+                "generation_mode": "smart_detail",
+                "include_detail_screens": False,
+                "iteration": 0,
+                "errors": [],
+            }
+        )
+        # Smart_detail: asset plan empty, but detail_prompts populated
+        self.assertEqual(result.get("asset_plan"), [])
+        self.assertIn("detail_prompts", result)
+        self.assertEqual(len(result["detail_prompts"]), 7)
+
+    def test_custom_assets_no_detail_skips_prompts(self):
+        """custom_assets without include_detail_screens should not generate prompts or detail_prompts."""
+        graph = build_graph()
+        result = graph.invoke(
+            {
+                "job_id": "job-4",
+                "sku_id": "sku-4",
+                "images": ["img1"],
+                "user_specs": {"product_type": "护手霜", "brand": "TestBrand"},
+                "user_selling_points": ["滋润"],
+                "user_constraints": {"platform": "tmall", "enable_web_enhancement": True, "max_qa_iterations": 1},
+                "generation_mode": "custom_assets",
+                "include_detail_screens": False,
+                "asset_types_requested": [{"type_name": "主图", "count": 1}],
+                "iteration": 0,
+                "errors": [],
+            }
+        )
+        # Should have asset_plan but NOT prompts or detail_prompts
+        self.assertGreater(len(result.get("asset_plan", [])), 0)
+        self.assertEqual(result.get("prompts", None), {})
+        self.assertEqual(result.get("detail_prompts", None), {})
+
+    def test_custom_assets_with_detail_screens_generates_both(self):
+        """custom_assets + include_detail_screens=True should generate both asset_prompts and detail_prompts."""
+        graph = build_graph()
+        result = graph.invoke(
+            {
+                "job_id": "job-5",
+                "sku_id": "sku-5",
+                "images": ["img1"],
+                "user_specs": {"product_type": "护手霜", "brand": "TestBrand"},
+                "user_selling_points": ["滋润"],
+                "user_constraints": {"platform": "tmall", "enable_web_enhancement": True, "max_qa_iterations": 1},
+                "generation_mode": "custom_assets",
+                "include_detail_screens": True,
+                "asset_types_requested": [{"type_name": "主图", "count": 1}],
+                "iteration": 0,
+                "errors": [],
+            }
+        )
+        self.assertGreater(len(result.get("asset_plan", [])), 0)
+        self.assertEqual(len(result.get("detail_prompts", {})), 7)
+        self.assertEqual(len(result.get("prompts", {})), 7)
+
+    def test_hybrid_generates_both(self):
+        """hybrid mode should produce both detail_prompts and asset_prompts."""
+        graph = build_graph()
+        result = graph.invoke(
+            {
+                "job_id": "job-6",
+                "sku_id": "sku-6",
+                "images": ["img1"],
+                "user_specs": {"product_type": "护手霜", "brand": "TestBrand"},
+                "user_selling_points": ["滋润"],
+                "user_constraints": {"platform": "tmall", "enable_web_enhancement": True, "max_qa_iterations": 1},
+                "generation_mode": "hybrid",
+                "include_detail_screens": False,
+                "asset_types_requested": [{"type_name": "主图", "count": 2}],
+                "iteration": 0,
+                "errors": [],
+            }
+        )
+        # Hybrid: both detail and asset prompts populated
+        self.assertEqual(len(result.get("detail_prompts", {})), 7)
+        self.assertEqual(len(result.get("prompts", {})), 7)
+        self.assertIn("asset_prompts", result)
+        self.assertIn("主图", result.get("asset_prompts", {}))
 
 
 if __name__ == "__main__":

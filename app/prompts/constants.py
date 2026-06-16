@@ -12,3 +12,8 @@ SCREEN_FLOW = {
     "screen_6": ("信任强化", "细节对比与风险消除"),
     "screen_7": ("决策", "购买理由总结"),
 }
+
+
+DETAIL_FIDELITY_REQUIREMENT = (
+    "严格还原上传的产品图，包括包装设计、颜色、LOGO位置、文字内容、图案元素等所有细节。"
+)

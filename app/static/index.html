@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ecom Visual Factory · 电商图生成</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; padding: 20px; }
+.container { max-width: 1120px; margin: 0 auto; }
+h1 { font-size: 20px; }
+.subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
+
+/* Mode selector */
+.mode-selector { display: flex; gap: 12px; margin: 16px 0; }
+.mode-btn { flex: 1; padding: 16px 20px; border: 2px solid #d0d5dd; border-radius: 12px; background: #fff; cursor: pointer; text-align: center; transition: all .15s; }
+.mode-btn:hover { border-color: #a5b4fc; }
+.mode-btn.active { border-color: #6366f1; background: #eef2ff; }
+.mode-btn .mode-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+.mode-btn .mode-title { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+.mode-btn .mode-desc { font-size: 12px; color: #666; margin-top: 4px; }
+.mode-btn.active .mode-title { color: #4338ca; }
+
+.card { background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.card h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+.form-row { display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.form-group { flex: 1; min-width: 140px; }
+.form-group label { display: block; font-size: 11px; font-weight: 600; color: #555; margin-bottom: 3px; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 7px 9px; border: 1px solid #d0d5dd; border-radius: 6px; font-size: 13px; background: #fff; }
+.form-group textarea { font-family: "SF Mono", Menlo, monospace; font-size: 12px; resize: vertical; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
+
+.toggle-row { display: flex; gap: 20px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+.toggle-row label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #444; cursor: pointer; }
+.toggle-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+.btn { background: #6366f1; color: #fff; border: none; padding: 10px 28px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; transition: background .15s; }
+.btn:hover { background: #4f46e5; }
+.btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+.btn-sm { background: #e5e7eb; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.btn-sm:hover { background: #d1d5db; }
+.btn-sm.primary { background: #6366f1; color: #fff; }
+.btn-sm.primary:hover { background: #4f46e5; }
+.btn-copy { background: #e5e7eb; border: none; padding: 4px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; float: right; }
+.btn-copy:hover { background: #d1d5db; }
+.btn-copy.copied { background: #d1fae5; color: #065f46; }
+.btn-danger { background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.btn-danger:hover { background: #dc2626; }
+
+.status-bar { padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; display: none; }
+.status-bar.loading { display: block; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.status-bar.error { display: block; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.status-bar.success { display: block; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #bfdbfe; border-top-color: #2563eb; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.hidden-section { display: none; }
+
+.result-section { display: none; }
+.result-section.visible { display: block; }
+.result-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+.result-tab { padding: 7px 16px; border: 1px solid #d0d5dd; border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; font-weight: 500; transition: all .1s; }
+.result-tab:hover { border-color: #a5b4fc; }
+.result-tab.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+.result-tab-content { display: none; }
+.result-tab-content.active { display: block; }
+.result-tab-content pre { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; line-height: 1.6; max-height: 600px; overflow-y: auto; }
+.meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.meta-item { background: #f8fafc; padding: 8px 10px; border-radius: 6px; }
+.meta-item .label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: .5px; }
+.meta-item .value { font-size: 13px; font-weight: 600; margin-top: 2px; color: #1a1a2e; }
+
+/* Image upload */
+.image-upload-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+.image-upload-item { width: 135px; border: 2px dashed #d0d5dd; border-radius: 8px; padding: 8px; text-align: center; cursor: pointer; position: relative; }
+.image-upload-item.has-image { border-style: solid; border-color: #6366f1; }
+.image-upload-item .preview { width: 100%; height: 100px; object-fit: contain; display: block; border-radius: 4px; }
+.image-upload-item .remove-img { position: absolute; top: -6px; right: -6px; background: #ef4444; color: #fff; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; line-height: 18px; text-align: center; cursor: pointer; display: none; }
+.image-upload-item:hover .remove-img { display: block; }
+.image-upload-item .placeholder { width: 100%; height: 100px; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 24px; border-radius: 4px; background: #f8fafc; }
+.image-upload-item input[type="file"] { display: none; }
+.image-upload-item select { width: 100%; font-size: 10px; padding: 2px 4px; margin-top: 4px; border: 1px solid #d0d5dd; border-radius: 4px; }
+
+/* Asset type grid */
+.asset-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.asset-type-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; text-align: center; }
+.asset-type-item .label { font-size: 11px; font-weight: 600; }
+.asset-type-item .count-input { width: 60px; text-align: center; padding: 3px; border: 1px solid #d0d5dd; border-radius: 4px; font-size: 13px; margin-top: 4px; }
+
+/* Platform rules table */
+.rules-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.rules-table th, .rules-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+.rules-table th { background: #f8fafc; font-weight: 600; white-space: nowrap; }
+.rules-table td { vertical-align: top; }
+.rules-table .type-name { font-weight: 600; white-space: nowrap; }
+.rules-table .rules-list { padding-left: 14px; margin: 0; }
+
+/* Prompt card */
+.prompt-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 10px; }
+.prompt-card .prompt-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; border-radius: 6px 6px 0 0; }
+.prompt-card .prompt-header .title { font-size: 12px; font-weight: 600; }
+.prompt-card .prompt-body { padding: 10px 12px; font-size: 12px; white-space: pre-wrap; line-height: 1.6; max-height: 300px; overflow-y: auto; }
+
+/* Asset plan table */
+.asset-plan-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.asset-plan-table th, .asset-plan-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+.asset-plan-table th { background: #f8fafc; font-weight: 600; }
+
+/* QA report */
+.qa-pass { color: #16a34a; font-weight: 600; }
+.qa-fail { color: #dc2626; font-weight: 600; }
+.qa-issues { list-style: none; padding: 0; }
+.qa-issues li { padding: 4px 8px; margin: 2px 0; border-radius: 4px; font-size: 12px; }
+.qa-issues .high { background: #fef2f2; color: #991b1b; }
+.qa-issues .medium { background: #fffbeb; color: #92400e; }
+.qa-issues .low { background: #f0fdf4; color: #166534; }
+
+.manual-review-badge { display: inline-block; background: #fef3c7; color: #92400e; font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🖼️ Ecom Visual Factory</h1>
+<p class="subtitle">电商详情图 &amp; 素材智能生成</p>
+
+<!-- Mode Selector -->
+<div class="mode-selector" id="modeSelector">
+  <div class="mode-btn active" data-mode="smart_detail" onclick="switchMode('smart_detail')">
+    <span class="mode-icon">✨</span>
+    <span class="mode-title">智能生图</span>
+    <span class="mode-desc">简单填写，自动生成7屏详情页策略与Prompt</span>
+  </div>
+  <div class="mode-btn" data-mode="custom_assets" onclick="switchMode('custom_assets')">
+    <span class="mode-icon">🎛️</span>
+    <span class="mode-title">自定义选择</span>
+    <span class="mode-desc">选择平台与素材类型，精确控制每类图片生成</span>
+  </div>
+</div>
+
+<!-- Status Bar -->
+<div id="status" class="status-bar"></div>
+
+<!-- Smart Detail Form -->
+<div class="card" id="smartFormFields">
+  <h2>📝 产品信息（智能生图）</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>产品名称</label>
+      <input id="smartName" placeholder="例: 不锈钢保温杯" value="不锈钢保温杯">
+    </div>
+    <div class="form-group">
+      <label>品牌</label>
+      <input id="smartBrand" placeholder="例: Thermo" value="TestBrand">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>产品类型</label>
+      <select id="smartType">
+        <option value="家居百货" selected>家居百货</option>
+        <option value="电子产品">电子产品</option>
+        <option value="服饰鞋包">服饰鞋包</option>
+        <option value="美妆个护">美妆个护</option>
+        <option value="食品饮料">食品饮料</option>
+        <option value="母婴用品">母婴用品</option>
+        <option value="运动户外">运动户外</option>
+        <option value="宠物用品">宠物用品</option>
+        <option value="办公文具">办公文具</option>
+        <option value="汽车用品">汽车用品</option>
+        <option value="家居家装">家居家装</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>目标市场</label>
+      <select id="smartMarket">
+        <option value="中国大陆">中国大陆</option>
+        <option value="美国" selected>美国</option>
+        <option value="欧洲">欧洲</option>
+        <option value="东南亚">东南亚</option>
+        <option value="日本">日本</option>
+        <option value="中东">中东</option>
+        <option value="拉美">拉美</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group" style="margin-bottom:6px">
+    <label>规格参数</label>
+    <textarea id="smartSpecs" rows="2" placeholder="容量:500ml&#10;材质:304不锈钢">容量:500ml&#10;材质:304不锈钢&#10;保温:12小时</textarea>
+  </div>
+  <div class="form-group" style="margin-bottom:6px">
+    <label>核心卖点 <button class="btn-sm" onclick="addSellingPoint('smart')" type="button">+</button></label>
+    <div id="smartSellingPoints"></div>
+  </div>
+  <div class="form-group" style="margin-bottom:6px">
+    <label>产品图片 <button class="btn-sm" onclick="addImageSlot('smart')" type="button">+ 添加图片</button></label>
+    <div class="image-upload-grid" id="smartImages"></div>
+  </div>
+  <div class="form-row" style="margin-top:8px">
+    <div class="form-group">
+      <label>平台（参考）</label>
+      <select id="smartPlatform">
+        <option value="">不指定（通用）</option>
+        <option value="amazon" selected>Amazon</option>
+        <option value="tiktok_shop">TikTok Shop</option>
+        <option value="shopee">Shopee</option>
+        <option value="temu">Temu</option>
+        <option value="lazada">Lazada</option>
+        <option value="jd">京东</option>
+        <option value="taobao">淘宝</option>
+        <option value="tmall">天猫</option>
+        <option value="alibaba">阿里国际站</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>平台参考说明</label>
+      <div id="smartPlatformHint" style="font-size:11px;color:#888;padding:6px 8px;background:#f8fafc;border-radius:4px;min-height:30px;">选择平台或留空</div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Assets Form -->
+<div class="card" style="display:none" id="customFormFields">
+  <h2>📝 产品信息（自定义选择）</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>产品名称</label>
+      <input id="customName" placeholder="例: 不锈钢保温杯" value="不锈钢保温杯">
+    </div>
+    <div class="form-group">
+      <label>品牌</label>
+      <input id="customBrand" placeholder="例: Thermo" value="TestBrand">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>产品类型</label>
+      <select id="customType">
+        <option value="家居百货" selected>家居百货</option>
+        <option value="电子产品">电子产品</option>
+        <option value="服饰鞋包">服饰鞋包</option>
+        <option value="美妆个护">美妆个护</option>
+        <option value="食品饮料">食品饮料</option>
+        <option value="母婴用品">母婴用品</option>
+        <option value="运动户外">运动户外</option>
+        <option value="宠物用品">宠物用品</option>
+        <option value="办公文具">办公文具</option>
+        <option value="汽车用品">汽车用品</option>
+        <option value="家居家装">家居家装</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>目标市场</label>
+      <select id="customMarket">
+        <option value="中国大陆">中国大陆</option>
+        <option value="美国" selected>美国</option>
+        <option value="欧洲">欧洲</option>
+        <option value="东南亚">东南亚</option>
+        <option value="日本">日本</option>
+        <option value="中东">中东</option>
+        <option value="拉美">拉美</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group" style="margin-bottom:6px">
+    <label>规格参数</label>
+    <textarea id="customSpecs" rows="2" placeholder="容量:500ml&#10;材质:304不锈钢">容量:500ml&#10;材质:304不锈钢&#10;保温:12小时</textarea>
+  </div>
+  <div class="form-group" style="margin-bottom:6px">
+    <label>核心卖点 <button class="btn-sm" onclick="addSellingPoint('custom')" type="button">+</button></label>
+    <div id="customSellingPoints"></div>
+  </div>
+  <div class="form-group" style="margin-bottom:6px">
+    <label>产品图片 <button class="btn-sm" onclick="addImageSlot('custom')" type="button">+ 添加图片</button></label>
+    <div class="image-upload-grid" id="customImages"></div>
+  </div>
+  <div class="form-row" style="margin-top:8px">
+    <div class="form-group">
+      <label>平台</label>
+      <select id="customPlatform" onchange="onCustomPlatformChange()">
+        <option value="amazon" selected>Amazon</option>
+        <option value="tiktok_shop">TikTok Shop</option>
+        <option value="shopee">Shopee</option>
+        <option value="temu">Temu</option>
+        <option value="lazada">Lazada</option>
+        <option value="jd">京东</option>
+        <option value="taobao">淘宝</option>
+        <option value="tmall">天猫</option>
+        <option value="alibaba">阿里国际站</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Platform Rules Table (custom mode) -->
+  <div id="customPlatformRules" style="margin-top:10px;display:none">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:6px">📋 平台图片要求</h3>
+    <div id="platformRulesTableContainer" style="max-height:400px;overflow:auto"></div>
+  </div>
+
+  <!-- Asset Type Grid -->
+  <div style="margin-top:12px">
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:8px">🎯 输出图片类型 <span style="font-weight:400;font-size:11px;color:#888">设置每种类型的生成张数</span></h3>
+    <div class="asset-type-grid" id="assetTypeGrid"></div>
+  </div>
+
+  <!-- Include detail screens checkbox -->
+  <div class="toggle-row" style="margin-top:12px">
+    <label><input type="checkbox" id="customIncludeDetail"> 同时生成7屏详情页</label>
+    <span style="font-size:11px;color:#888">勾选后额外输出7屏详情页Prompt</span>
+  </div>
+</div>
+
+<!-- Shared Toggles -->
+<div class="card">
+  <h2>⚙️ 生成设置</h2>
+  <div class="toggle-row">
+    <label><input type="checkbox" id="webEnhancement" checked> 联网增强</label>
+    <label><input type="checkbox" id="imageGeneration"> 执行图片生成</label>
+  </div>
+</div>
+
+<!-- Submit -->
+<button class="btn" id="submitBtn" onclick="generate()">🚀 生成</button>
+
+<!-- Results -->
+<div id="result" class="card result-section" style="margin-top:14px">
+  <h2>📊 生成结果</h2>
+  <div class="meta-grid" id="resultMeta"></div>
+  <div class="result-tabs" id="resultTabs"></div>
+  <div id="resultContent"></div>
+</div>
+
+</div>
+
+<script>
+// --- State ---
+let mode = 'smart_detail';
+let smartImgCount = 3;
+let customImgCount = 3;
+let apiEndpoint = '/api/v1/generate';
+
+const ASSET_TYPES = ['主图','使用场景图','核心卖点图','细节微距图','尺寸参照图','竞品对比图','包装图','广告摄影图'];
+const PLATFORM_NAMES = {amazon:'Amazon',tiktok_shop:'TikTok Shop',shopee:'Shopee',temu:'Temu',lazada:'Lazada',jd:'京东',taobao:'淘宝',tmall:'天猫',alibaba:'阿里国际站'};
+const IMAGE_ROLES = ['正面','侧面','背面','俯视','45度','细节特写','包装','使用场景'];
+
+// --- Init ---
+window.addEventListener('DOMContentLoaded', () => {
+  initImageSlots('smart', 3);
+  initImageSlots('custom', 3);
+  initSellingPoints('smart', ['保温12小时','食品级304不锈钢','防漏设计']);
+  initSellingPoints('custom', ['保温12小时','食品级304不锈钢','防漏设计']);
+  initAssetTypeGrid();
+  onCustomPlatformChange();
+  const p = document.getElementById('smartPlatform');
+  if (p) updatePlatformHint(p.value);
+});
+
+function initImageSlots(prefix, count) {
+  const container = document.getElementById(prefix + 'Images');
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const el = createImageSlot(prefix, i);
+    container.appendChild(el);
+  }
+  if (prefix === 'smart') smartImgCount = count;
+  else customImgCount = count;
+}
+
+function createImageSlot(prefix, idx) {
+  const div = document.createElement('div');
+  div.className = 'image-upload-item';
+  div.innerHTML = `
+    <div class="placeholder" onclick="this.nextElementSibling.click()">📷</div>
+    <input type="file" accept="image/*" onchange="handleImageUpload(this,'${prefix}_${idx}')">
+    <select onchange="updateImageRole('${prefix}',${idx},this.value)">
+      <option value="">选择角度</option>
+      ${IMAGE_ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
+    </select>
+  `;
+  return div;
+}
+
+function handleImageUpload(input, id) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const item = input.closest('.image-upload-item');
+    item.classList.add('has-image');
+    const placeholder = item.querySelector('.placeholder');
+    placeholder.outerHTML = `<img class="preview" src="${e.target.result}">`;
+    // Add remove button
+    const r = document.createElement('div');
+    r.className = 'remove-img'; r.textContent = '×';
+    r.onclick = () => { item.querySelector('.placeholder')?.remove(); input.value = ''; item.classList.remove('has-image'); item.querySelector('.preview')?.remove(); const p = document.createElement('div'); p.className = 'placeholder'; p.textContent = '📷'; p.onclick = () => input.click(); item.appendChild(p); };
+    item.appendChild(r);
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateImageRole(prefix, idx, val) {
+  const key = prefix + 'Roles';
+  if (!window[key]) window[key] = {};
+  window[key][idx] = val;
+}
+
+function addImageSlot(prefix) {
+  const container = document.getElementById(prefix + 'Images');
+  const count = prefix === 'smart' ? ++smartImgCount : ++customImgCount;
+  container.appendChild(createImageSlot(prefix, count - 1));
+}
+
+function removeImageSlot(prefix, idx) {
+  const container = document.getElementById(prefix + 'Images');
+  const children = container.children;
+  if (children.length <= 1) return;
+  children[idx].remove();
+  if (prefix === 'smart') smartImgCount--;
+  else customImgCount--;
+}
+
+// --- Selling Points ---
+function initSellingPoints(prefix, points) {
+  const container = document.getElementById(prefix + 'SellingPoints');
+  container.innerHTML = '';
+  points.forEach((p, i) => addSellingPointRow(prefix, p, i));
+}
+
+function addSellingPoint(prefix) {
+  const container = document.getElementById(prefix + 'SellingPoints');
+  const idx = container.children.length;
+  addSellingPointRow(prefix, '', idx);
+}
+
+function addSellingPointRow(prefix, val, idx) {
+  const container = document.getElementById(prefix + 'SellingPoints');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:4px';
+  row.innerHTML = `
+    <input type="text" placeholder="卖点 ${idx+1}" value="${val}" style="flex:1;padding:7px 9px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px">
+    <button class="btn-danger" style="padding:4px 10px;font-size:14px;width:32px" onclick="this.parentElement.remove()" type="button">×</button>
+  `;
+  container.appendChild(row);
+}
+
+// --- Asset Type Grid ---
+function initAssetTypeGrid() {
+  const grid = document.getElementById('assetTypeGrid');
+  grid.innerHTML = '';
+  ASSET_TYPES.forEach(t => {
+    const item = document.createElement('div');
+    item.className = 'asset-type-item';
+    item.innerHTML = `<div class="label">${t}</div>
+      <input class="count-input" type="number" min="0" max="10" value="1">
+      <div style="font-size:10px;color:#888;margin-top:2px">张</div>`;
+    grid.appendChild(item);
+  });
+}
+
+// --- Platform ---
+function onCustomPlatformChange() {
+  const sel = document.getElementById('customPlatform');
+  const platform = sel.value;
+  if (!platform) { document.getElementById('customPlatformRules').style.display = 'none'; return; }
+  document.getElementById('customPlatformRules').style.display = 'block';
+  const container = document.getElementById('platformRulesTableContainer');
+  container.innerHTML = '<div style="padding:20px;text-align:center;color:#888"><span class="spinner"></span> 加载平台规则...</div>';
+  fetch('/api/v1/platform-rules/' + platform)
+    .then(r => r.json())
+    .then(data => {
+      let html = '<table class="rules-table"><thead><tr><th>图片类型</th><th>最少</th><th>推荐尺寸</th><th>比例</th><th>背景</th><th>规则</th></tr></thead><tbody>';
+      const ir = data.image_rules || {};
+      ASSET_TYPES.forEach(at => {
+        const rule = ir[at];
+        if (!rule) return;
+        html += `<tr><td class="type-name">${at}</td>
+          <td>${rule.min_resolution || '—'}</td>
+          <td>${rule.recommended || '—'}</td>
+          <td>${rule.aspect_ratio || '—'}</td>
+          <td>${rule.background || '—'}</td>
+          <td>${rule.rules ? '<ul class="rules-list">' + rule.rules.map(r => '<li>' + r + '</li>').join('') + '</ul>' : '—'}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      html += `<p style="font-size:10px;color:#888;margin-top:4px">${data.needs_manual_review ? '<span class="manual-review-badge">需人工确认</span> ' : ''}数据来源：平台官方文档</p>`;
+      container.innerHTML = html;
+    })
+    .catch(err => { container.innerHTML = '<p style="color:#dc2626;font-size:12px">加载失败：' + err.message + '</p>'; });
+}
+
+function updatePlatformHint(val) {
+  const div = document.getElementById('smartPlatformHint');
+  if (!val) { div.textContent = '平台仅作参考，不影响7屏详情页生成。'; return; }
+  fetch('/api/v1/platform-rules/' + val)
+    .then(r => r.json())
+    .then(data => { div.innerHTML = `${PLATFORM_NAMES[val]||val} · ${data.needs_manual_review ? '<span class="manual-review-badge">需人工确认</span> ' : ''}仅作风格参考，不强制应用平台规则到7屏详情页`; })
+    .catch(() => { div.textContent = PLATFORM_NAMES[val] || val; });
+}
+
+// --- Mode ---
+function switchMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  document.getElementById('smartFormFields').style.display = m === 'smart_detail' ? 'block' : 'none';
+  document.getElementById('customFormFields').style.display = m === 'custom_assets' ? 'block' : 'none';
+}
+
+// --- Generate ---
+function getImageData(prefix) {
+  const container = document.getElementById(prefix + 'Images');
+  const imgs = [];
+  const roles = [];
+  Array.from(container.children).forEach((item, idx) => {
+    const img = item.querySelector('.preview');
+    if (img && img.src) {
+      imgs.push(img.src);
+      const sel = item.querySelector('select');
+      roles.push(sel ? sel.value : '');
+    }
+  });
+  return { images: imgs, roles: roles };
+}
+
+function getSellingPoints(prefix) {
+  const container = document.getElementById(prefix + 'SellingPoints');
+  return Array.from(container.querySelectorAll('input[type="text"]')).map(i => i.value).filter(v => v.trim());
+}
+
+async function generate() {
+  const status = document.getElementById('status');
+  const submitBtn = document.getElementById('submitBtn');
+  status.className = 'status-bar loading';
+  status.innerHTML = '<span class="spinner"></span> 生成中...';
+  submitBtn.disabled = true;
+
+  try {
+    let payload;
+
+    if (mode === 'smart_detail') {
+      const imgData = getImageData('smart');
+      payload = {
+        product_name: document.getElementById('smartName').value,
+        brand: document.getElementById('smartBrand').value,
+        product_type: document.getElementById('smartType').value,
+        target_market: document.getElementById('smartMarket').value,
+        specs: { text: document.getElementById('smartSpecs').value },
+        selling_points: getSellingPoints('smart'),
+        images: imgData.images,
+        image_roles: imgData.roles,
+        constraints: {
+          platform: document.getElementById('smartPlatform').value || 'tmall',
+          generation_mode: 'smart_detail',
+          include_detail_screens: false,
+          enable_web_enhancement: document.getElementById('webEnhancement').checked,
+          enable_image_generation: document.getElementById('imageGeneration').checked,
+        }
+      };
+    } else {
+      const imgData = getImageData('custom');
+      const assetTypes = [];
+      document.querySelectorAll('#assetTypeGrid .asset-type-item').forEach(item => {
+        const label = item.querySelector('.label').textContent;
+        const count = parseInt(item.querySelector('.count-input').value) || 0;
+        if (count > 0) assetTypes.push({ type_name: label, count });
+      });
+
+      payload = {
+        product_name: document.getElementById('customName').value,
+        brand: document.getElementById('customBrand').value,
+        product_type: document.getElementById('customType').value,
+        target_market: document.getElementById('customMarket').value,
+        specs: { text: document.getElementById('customSpecs').value },
+        selling_points: getSellingPoints('custom'),
+        images: imgData.images,
+        image_roles: imgData.roles,
+        asset_types: assetTypes,
+        constraints: {
+          platform: document.getElementById('customPlatform').value || 'tmall',
+          generation_mode: 'custom_assets',
+          include_detail_screens: document.getElementById('customIncludeDetail').checked,
+          enable_web_enhancement: document.getElementById('webEnhancement').checked,
+          enable_image_generation: document.getElementById('imageGeneration').checked,
+        }
+      };
+    }
+
+    const res = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error('HTTP ' + res.status + ': ' + errText);
+    }
+
+    const data = await res.json();
+    status.className = 'status-bar success';
+    status.innerHTML = '✅ 生成完成';
+    renderResult(data);
+
+  } catch (err) {
+    status.className = 'status-bar error';
+    status.innerHTML = '❌ ' + err.message;
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+// --- Render ---
+function renderResult(data) {
+  const resultDiv = document.getElementById('result');
+  resultDiv.classList.add('visible');
+
+  // Meta
+  const meta = document.getElementById('resultMeta');
+  meta.innerHTML = '';
+  const metaFields = [
+    ['SKU', data.sku_id || '—'],
+    ['产品', data.product_name || '—'],
+    ['品牌', data.brand || '—'],
+    ['类型', data.product_type || '—'],
+    ['市场', data.target_market || '—'],
+    ['平台', (data.platform_rules_applied && data.platform_rules_applied.name) || '—'],
+    ['Image Gen', data.image_generation_status?.enabled ? '✅ 开启' : '⬜ 关闭'],
+    ['QA', data.qa_report?.pass ? '✅ 通过' : '❌ ' + (data.qa_report?.issues?.length || 0) + ' 问题'],
+  ];
+  metaFields.forEach(([label, val]) => {
+    meta.innerHTML += `<div class="meta-item"><div class="label">${label}</div><div class="value">${val}</div></div>`;
+  });
+
+  // Tabs
+  const tabsContainer = document.getElementById('resultTabs');
+  const contentContainer = document.getElementById('resultContent');
+  tabsContainer.innerHTML = '';
+  contentContainer.innerHTML = '';
+
+  const detailPrompts = data.detail_prompts || data.prompts || {};
+  const assetPrompts = data.asset_prompts || {};
+  const assetPlan = data.asset_plan || [];
+  const rules = data.platform_rules_applied || {};
+  const qa = data.qa_report || { pass: true, issues: [], severity: { high: [], medium: [], low: [] } };
+
+  const hasDetail = Object.keys(detailPrompts).length > 0;
+  const hasAsset = assetPlan.length > 0;
+  const hasAssetPrompts = Object.keys(assetPrompts).length > 0;
+
+  let tabs = [];
+  let content = {};
+
+  // Detail prompts tab
+  if (hasDetail) {
+    tabs.push('7屏详情页');
+    let html = '';
+    const keys = Object.keys(detailPrompts).sort();
+    keys.forEach(key => {
+      const prompt = detailPrompts[key];
+      html += `<div class="prompt-card">
+        <div class="prompt-header">
+          <span class="title">${key}</span>
+          <button class="btn-copy" onclick="copyPrompt(this,'${key.replace(/'/g,"\\'")}')">📋 复制</button>
+        </div>
+        <div class="prompt-body">${escapeHtml(prompt)}</div>
+      </div>`;
+    });
+    content['7屏详情页'] = html;
+  }
+
+  // Asset Plan tab
+  if (hasAsset) {
+    tabs.push('素材计划');
+    let html = '<table class="asset-plan-table"><thead><tr><th>类型</th><th>数量</th><th>推荐尺寸</th><th>比例</th><th>背景</th><th>规则</th></tr></thead><tbody>';
+    assetPlan.forEach(item => {
+      const rulesList = item.rules ? (Array.isArray(item.rules) ? item.rules : [item.rules]) : [];
+      html += `<tr><td class="type-name">${item.type}</td>
+        <td>${item.count}</td>
+        <td>${item.recommended_resolution || item.min_resolution || '—'}</td>
+        <td>${item.aspect_ratio || '—'}</td>
+        <td>${item.background || '—'}</td>
+        <td>${rulesList.length > 0 ? '<ul class="rules-list">' + rulesList.map(r => '<li>' + r + '</li>').join('') + '</ul>' : '—'}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    content['素材计划'] = html;
+  }
+
+  // Asset Prompts tab
+  if (hasAssetPrompts) {
+    tabs.push('各类型Prompt');
+    let html = '';
+    Object.keys(assetPrompts).forEach(type => {
+      const prompts = assetPrompts[type];
+      if (!Array.isArray(prompts)) prompts = [prompts];
+      html += `<h3 style="font-size:13px;font-weight:600;margin:10px 0 6px">${type} (${prompts.length}张)</h3>`;
+      prompts.forEach((p, i) => {
+        html += `<div class="prompt-card">
+          <div class="prompt-header">
+            <span class="title">${type} #${i+1}</span>
+            <button class="btn-copy" onclick="copyText(this,'${escapeJsStr(p)}')">📋 复制</button>
+          </div>
+          <div class="prompt-body">${escapeHtml(p)}</div>
+        </div>`;
+      });
+    });
+    content['各类型Prompt'] = html;
+  }
+
+  // Platform Rules tab
+  if (rules && rules.image_rules) {
+    tabs.push('平台规则');
+    let html = `<p style="font-size:12px;color:#666;margin-bottom:6px">${rules.name} · ${rules.needs_manual_review ? '<span class="manual-review-badge">需人工确认</span>' : '官方已确认'}</p>`;
+    html += '<table class="rules-table"><thead><tr><th>类型</th><th>最少</th><th>推荐尺寸</th><th>比例</th><th>背景</th><th>规则</th></tr></thead><tbody>';
+    const ir = rules.image_rules;
+    ASSET_TYPES.forEach(at => {
+      const rule = ir[at];
+      if (!rule) return;
+      html += `<tr><td class="type-name">${at}</td>
+        <td>${rule.min_resolution || '—'}</td>
+        <td>${rule.recommended || '—'}</td>
+        <td>${rule.aspect_ratio || '—'}</td>
+        <td>${rule.background || '—'}</td>
+        <td>${rule.rules ? '<ul class="rules-list">' + rule.rules.map(r => '<li>' + r + '</li>').join('') + '</ul>' : '—'}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    if (rules.detail_page_rules) {
+      const dr = rules.detail_page_rules;
+      html += `<p style="font-size:11px;color:#888;margin-top:6px">详情页要求：${dr.min_images || 0}-${dr.max_images || '无限制'}张 · ${dr.preferred_format || 'JPEG'} · ${dr.notes || ''}</p>`;
+    }
+    content['平台规则'] = html;
+  }
+
+  // QA Report tab
+  tabs.push('QA报告');
+  let qaHtml = `<p>${qa.pass ? '<span class="qa-pass">✅ 通过</span>' : '<span class="qa-fail">❌ 未通过</span>'}</p>`;
+  if (qa.issues && qa.issues.length > 0) {
+    qaHtml += '<ul class="qa-issues">';
+    qa.issues.forEach(issue => qaHtml += `<li class="medium">${issue}</li>`);
+    qaHtml += '</ul>';
+  }
+  qaHtml += `<div style="margin-top:8px">`;
+  const sev = qa.severity || {};
+  if (sev.high && sev.high.length > 0) qaHtml += `<p style="font-size:12px;color:#991b1b">⚠️ 高：${sev.high.join(', ')}</p>`;
+  if (sev.medium && sev.medium.length > 0) qaHtml += `<p style="font-size:12px;color:#92400e">⚠️ 中：${sev.medium.join(', ')}</p>`;
+  if (sev.low && sev.low.length > 0) qaHtml += `<p style="font-size:12px;color:#166534">ℹ️ 低：${sev.low.join(', ')}</p>`;
+  qaHtml += '</div>';
+  if (qa.fix_suggestions && qa.fix_suggestions.length > 0) {
+    qaHtml += '<div style="margin-top:8px"><strong style="font-size:12px">建议：</strong><ul>';
+    qa.fix_suggestions.forEach(s => qaHtml += `<li style="font-size:12px;color:#666">${s}</li>`);
+    qaHtml += '</ul></div>';
+  }
+  content['QA报告'] = qaHtml;
+
+  // Full JSON tab
+  tabs.push('完整JSON');
+  content['完整JSON'] = `<button class="btn-copy" onclick="copyText(this,'${escapeJsStr(JSON.stringify(data, null, 2))}')">📋 复制全部</button>
+    <pre>${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+
+  // Build tabs
+  tabs.forEach((tabName, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'result-tab' + (i === 0 ? ' active' : '');
+    btn.textContent = tabName;
+    btn.onclick = () => switchResultTab(tabName);
+    tabsContainer.appendChild(btn);
+  });
+
+  // Build content
+  tabs.forEach((tabName, i) => {
+    const div = document.createElement('div');
+    div.className = 'result-tab-content' + (i === 0 ? ' active' : '');
+    div.id = 'rtab-' + tabName.replace(/\s+/g, '_');
+    div.innerHTML = content[tabName] || '';
+    contentContainer.appendChild(div);
+  });
+}
+
+function switchResultTab(name) {
+  document.querySelectorAll('.result-tab').forEach(t => t.classList.toggle('active', t.textContent === name));
+  document.querySelectorAll('.result-tab-content').forEach(c => c.classList.toggle('active', c.id === 'rtab-' + name.replace(/\s+/g, '_')));
+}
+
+function copyPrompt(btn, key) {
+  const parent = btn.closest('.prompt-card');
+  const text = parent.querySelector('.prompt-body').textContent;
+  copyText(btn, text);
+}
+
+function copyText(btn, text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✅ 已复制';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '📋 复制'; btn.classList.remove('copied'); }, 2000);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✅ 已复制';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 复制'; btn.classList.remove('copied'); }, 2000);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function escapeJsStr(str) {
+  if (!str) return '';
+  return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/"/g, '\\"');
+}
+</script>
+</body>
+</html>
