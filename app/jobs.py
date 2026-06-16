@@ -2,16 +2,34 @@ import threading
 import uuid
 import time
 import traceback
-from copy import deepcopy
 
 JOBS: dict[str, dict] = {}
 _lock = threading.Lock()
+JOB_TTL_SECONDS = 60 * 60 * 6
+MAX_JOBS = 200
+
+
+def _cleanup_locked(now: float):
+    expired = [
+        job_id
+        for job_id, job in JOBS.items()
+        if now - job.get("updated_at", job.get("created_at", now)) > JOB_TTL_SECONDS
+    ]
+    for job_id in expired:
+        JOBS.pop(job_id, None)
+
+    overflow = len(JOBS) - MAX_JOBS
+    if overflow > 0:
+        oldest = sorted(JOBS.items(), key=lambda item: item[1].get("updated_at", 0))
+        for job_id, _job in oldest[:overflow]:
+            JOBS.pop(job_id, None)
 
 
 def create_job(payload: dict) -> str:
     job_id = uuid.uuid4().hex[:16]
     now = time.time()
     with _lock:
+        _cleanup_locked(now)
         JOBS[job_id] = {
             "job_id": job_id,
             "status": "pending",
@@ -32,6 +50,7 @@ def update_job(job_id: str, **kwargs):
 
 def get_job(job_id: str) -> dict | None:
     with _lock:
+        _cleanup_locked(time.time())
         j = JOBS.get(job_id)
         if j is None:
             return None
