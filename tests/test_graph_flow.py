@@ -6,6 +6,7 @@ from app.graph.nodes.completion import ai_completion
 from app.graph.nodes.prompt_generator import prompt_generator
 from app.graph.nodes.prompt_revision import prompt_revision
 from app.graph.nodes.qa import qa_inspector, should_revise
+from app.graph.nodes.vision import vision_product_parser
 from app.prompts.constants import PRODUCT_FIDELITY_REQUIREMENT
 from app.schemas.requests import GenerateRequest
 from app.services.llm import LLMServiceError
@@ -227,6 +228,55 @@ class GraphFlowTests(unittest.TestCase):
         self.assertEqual(result["llm_mode_used"], "mock_fallback")
         self.assertEqual(result["completed_data"]["brand"]["value"], "未识别品牌")
         self.assertEqual(result["errors"][0]["node"], "completion")
+
+    def test_vision_live_dispatches_service_result(self):
+        live_vision = {
+            "raw_ocr": ["TEST"],
+            "visual_elements": [{"value": "正面包装", "confidence": 0.9, "source": "vision"}],
+            "packaging": {"brand": {"value": "LiveBrand", "confidence": 0.9, "source": "vision"}},
+            "text_detected": ["TEST"],
+            "materials_guess": [],
+            "design_features": [],
+            "selling_signals": [],
+            "user_guess": {},
+            "confidence": {"overall": 0.9},
+        }
+
+        with patch("app.services.llm.should_use_live_llm", return_value=True), patch(
+            "app.services.llm.parse_product_images",
+            return_value=live_vision,
+        ):
+            result = vision_product_parser({"images": ["data:image/png;base64,abc"], "errors": []})
+
+        self.assertEqual(result["vision_mode_used"], "live")
+        self.assertEqual(result["vision_data"]["packaging"]["brand"]["value"], "LiveBrand")
+
+    def test_vision_live_failure_falls_back_to_mock(self):
+        with patch("app.services.llm.should_use_live_llm", return_value=True), patch(
+            "app.services.llm.parse_product_images",
+            side_effect=LLMServiceError("vision failure"),
+        ):
+            result = vision_product_parser(
+                {
+                    "images": ["data:image/png;base64,abc"],
+                    "user_specs": {"brand": "FallbackBrand", "product_type": "水杯"},
+                    "errors": [],
+                }
+            )
+
+        self.assertEqual(result["vision_mode_used"], "mock_fallback")
+        self.assertEqual(result["vision_data"]["packaging"]["brand"]["value"], "FallbackBrand")
+        self.assertEqual(result["errors"][0]["node"], "vision")
+
+    def test_vision_live_without_images_uses_mock_without_calling_service(self):
+        with patch("app.services.llm.should_use_live_llm", return_value=True), patch(
+            "app.services.llm.parse_product_images",
+        ) as parse_images:
+            result = vision_product_parser({"images": [], "errors": []})
+
+        parse_images.assert_not_called()
+        self.assertNotIn("vision_mode_used", result)
+        self.assertEqual(result["vision_data"]["confidence"]["overall"], 0.1)
 
     def test_prompt_generator_live_dispatches_service_result(self):
         live_result = {

@@ -58,4 +58,4 @@ IMAGE_MODEL=gpt-image-2
 ENABLE_IMAGE_GENERATION=false
 ```
 
-当前 live 模式先接入文本链路：信息补全、7 屏策略、Prompt 生成。Vision 图片识别、Vision QA 和真实生图仍需后续接入；生图开关继续保持关闭，避免测试阶段产生图片生成成本。
+当前 live 模式已接入 Vision 图片识别、信息补全、7 屏策略、Prompt 生成。Vision QA 和真实生图仍需后续接入；生图开关继续保持关闭，避免测试阶段产生图片生成成本。

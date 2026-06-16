@@ -78,6 +78,82 @@ def _json_call(model: str, system_prompt: str, user_payload: dict[str, Any]) -> 
     return _extract_json(_response_text(response))
 
 
+def _vision_json_call(
+    model: str,
+    system_prompt: str,
+    text_payload: dict[str, Any],
+    images: list[str],
+    image_roles: list[str],
+) -> dict[str, Any]:
+    content: list[dict[str, Any]] = [
+        {
+            "type": "input_text",
+            "text": (
+                "请只输出一个合法 JSON 对象，不要使用 Markdown。\n"
+                f"{json.dumps(text_payload, ensure_ascii=False)}"
+            ),
+        }
+    ]
+    for index, image in enumerate(images):
+        role = image_roles[index] if index < len(image_roles) else "other"
+        content.append({"type": "input_text", "text": f"图片 {index + 1} 角色：{role}"})
+        content.append({"type": "input_image", "image_url": image})
+
+    response = _client().responses.create(
+        model=model,
+        input=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content},
+        ],
+    )
+    return _extract_json(_response_text(response))
+
+
+def parse_product_images(state: ProductState) -> dict[str, Any]:
+    images = state.get("images", [])
+    if not images:
+        raise LLMServiceError("vision parsing requires at least one image")
+
+    system_prompt = (
+        "你是电商产品视觉识别专家。任务：识别图片文字 OCR，提取包装设计、产品结构、材质特征、"
+        "目标用户推断、潜在卖点和置信度。禁止编造包装文字、认证、品牌事实、专利或功效。"
+        "输出 JSON，必须包含 raw_ocr, visual_elements, packaging, text_detected, materials_guess, "
+        "design_features, selling_signals, user_guess, confidence。所有不确定内容必须标低置信度。"
+    )
+    payload = {
+        "product_name": state.get("product_name", ""),
+        "brand_from_user": state.get("brand", ""),
+        "product_type_from_user": state.get("product_type", ""),
+        "target_market": state.get("target_market", ""),
+        "user_specs": state.get("user_specs", {}),
+        "user_selling_points": state.get("user_selling_points", []),
+        "image_roles": state.get("image_roles", []),
+    }
+    data = _vision_json_call(
+        settings.vision_model,
+        system_prompt,
+        payload,
+        images,
+        state.get("image_roles", []),
+    )
+
+    required = {
+        "raw_ocr",
+        "visual_elements",
+        "packaging",
+        "text_detected",
+        "materials_guess",
+        "design_features",
+        "selling_signals",
+        "user_guess",
+        "confidence",
+    }
+    missing = sorted(required - set(data))
+    if missing:
+        raise LLMServiceError(f"vision response missing fields: {', '.join(missing)}")
+    return data
+
+
 def complete_product_data(state: ProductState) -> dict[str, Any]:
     system_prompt = (
         "你是电商产品信息架构师。只补全缺失字段，不得编造品牌事实、认证、专利、真实成分或平台资质。"

@@ -1,7 +1,8 @@
 from app.graph.state import ProductState
+from app.services import llm
 
 
-def vision_product_parser(state: ProductState) -> dict:
+def _mock_vision_product_parser(state: ProductState) -> dict:
     images = state.get("images", [])
     specs = state.get("user_specs", {})
 
@@ -30,3 +31,18 @@ def vision_product_parser(state: ProductState) -> dict:
             "confidence": {"overall": 0.62 if images else 0.1},
         }
     }
+
+
+def vision_product_parser(state: ProductState) -> dict:
+    if llm.should_use_live_llm() and state.get("images"):
+        try:
+            return {"vision_data": llm.parse_product_images(state), "vision_mode_used": "live"}
+        except llm.LLMServiceError as exc:
+            errors = list(state.get("errors", []))
+            errors.append({"node": "vision", "severity": "medium", "message": str(exc)})
+            result = _mock_vision_product_parser(state)
+            result["errors"] = errors
+            result["vision_mode_used"] = "mock_fallback"
+            return result
+
+    return _mock_vision_product_parser(state)
