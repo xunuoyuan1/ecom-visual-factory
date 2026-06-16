@@ -1,6 +1,7 @@
 from app.graph.state import ProductState
 from app.prompts.constants import SCREEN_FLOW
 from app.data.platform_rules import PLATFORM_RULES, ASSET_TYPES
+from app.services import llm
 
 
 def _build_detail_prompts(state: ProductState) -> dict[str, str]:
@@ -83,6 +84,23 @@ def _build_asset_prompts(state: ProductState) -> dict[str, list[str]]:
 
 
 def prompt_generator(state: ProductState) -> dict:
+    if llm.should_use_live_llm():
+        try:
+            result = llm.generate_prompts(state)
+            result["llm_mode_used"] = "live"
+            return result
+        except llm.LLMServiceError as exc:
+            errors = list(state.get("errors", []))
+            errors.append({"node": "prompt_generator", "severity": "medium", "message": str(exc)})
+            result = _mock_prompt_generator(state)
+            result["errors"] = errors
+            result["llm_mode_used"] = "mock_fallback"
+            return result
+
+    return _mock_prompt_generator(state)
+
+
+def _mock_prompt_generator(state: ProductState) -> dict:
     generation_mode = state.get("generation_mode", "smart_detail")
     include_detail_screens = state.get("include_detail_screens", False)
 

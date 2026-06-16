@@ -36,3 +36,26 @@ pip install -e ".[dev]"
 pytest
 uvicorn app.main:app --reload
 ```
+
+## LLM 模式
+
+默认使用 mock 模式，不会调用 OpenAI，也不会产生模型费用：
+
+```env
+LLM_MODE=mock
+ENABLE_IMAGE_GENERATION=false
+```
+
+切到真实文本模型测试时：
+
+```env
+OPENAI_API_KEY=你的 API Key
+LLM_MODE=live
+VISION_MODEL=gpt-5.4
+REASONING_MODEL=gpt-5.5
+QA_MODEL=gpt-5.4
+IMAGE_MODEL=gpt-image-2
+ENABLE_IMAGE_GENERATION=false
+```
+
+当前 live 模式先接入文本链路：信息补全、7 屏策略、Prompt 生成。Vision 图片识别、Vision QA 和真实生图仍需后续接入；生图开关继续保持关闭，避免测试阶段产生图片生成成本。

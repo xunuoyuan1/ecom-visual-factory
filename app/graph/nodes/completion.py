@@ -1,7 +1,8 @@
 from app.graph.state import ProductState
+from app.services import llm
 
 
-def ai_completion(state: ProductState) -> dict:
+def _mock_completion(state: ProductState) -> dict:
     merged = dict(state.get("merged_data", {}))
     missing = set(state.get("missing_fields", []))
     product_type = merged.get("product_type", {}).get("value") or "该产品"
@@ -25,3 +26,18 @@ def ai_completion(state: ProductState) -> dict:
         }
 
     return {"completed_data": completed}
+
+
+def ai_completion(state: ProductState) -> dict:
+    if llm.should_use_live_llm():
+        try:
+            return {"completed_data": llm.complete_product_data(state), "llm_mode_used": "live"}
+        except llm.LLMServiceError as exc:
+            errors = list(state.get("errors", []))
+            errors.append({"node": "completion", "severity": "medium", "message": str(exc)})
+            result = _mock_completion(state)
+            result["errors"] = errors
+            result["llm_mode_used"] = "mock_fallback"
+            return result
+
+    return _mock_completion(state)

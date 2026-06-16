@@ -1,10 +1,14 @@
 import unittest
+from unittest.mock import patch
 
 from app.graph.builder import build_graph
+from app.graph.nodes.completion import ai_completion
+from app.graph.nodes.prompt_generator import prompt_generator
 from app.graph.nodes.prompt_revision import prompt_revision
 from app.graph.nodes.qa import qa_inspector, should_revise
 from app.prompts.constants import PRODUCT_FIDELITY_REQUIREMENT
 from app.schemas.requests import GenerateRequest
+from app.services.llm import LLMServiceError
 
 
 class GraphFlowTests(unittest.TestCase):
@@ -206,6 +210,39 @@ class GraphFlowTests(unittest.TestCase):
         self.assertEqual(result["detail_prompts"], {})
         self.assertEqual(result["prompts"], {})
         self.assertIn("asset:主图:1", result["generated_images"])
+
+    def test_completion_live_failure_falls_back_to_mock(self):
+        state = {
+            "merged_data": {"product_type": {"value": "保温杯"}},
+            "missing_fields": ["brand", "selling_points"],
+            "errors": [],
+        }
+
+        with patch("app.services.llm.should_use_live_llm", return_value=True), patch(
+            "app.services.llm.complete_product_data",
+            side_effect=LLMServiceError("temporary live failure"),
+        ):
+            result = ai_completion(state)
+
+        self.assertEqual(result["llm_mode_used"], "mock_fallback")
+        self.assertEqual(result["completed_data"]["brand"]["value"], "未识别品牌")
+        self.assertEqual(result["errors"][0]["node"], "completion")
+
+    def test_prompt_generator_live_dispatches_service_result(self):
+        live_result = {
+            "detail_prompts": {f"screen_{i}": f"主标题：Live {i}\n副标题：测试" for i in range(1, 8)},
+            "prompts": {f"screen_{i}": f"主标题：Live {i}\n副标题：测试" for i in range(1, 8)},
+            "asset_prompts": {},
+        }
+
+        with patch("app.services.llm.should_use_live_llm", return_value=True), patch(
+            "app.services.llm.generate_prompts",
+            return_value=live_result,
+        ):
+            result = prompt_generator({"generation_mode": "smart_detail"})
+
+        self.assertEqual(result["llm_mode_used"], "live")
+        self.assertEqual(result["detail_prompts"]["screen_1"], "主标题：Live 1\n副标题：测试")
 
     def test_custom_assets_with_detail_screens_generates_both(self):
         """custom_assets + include_detail_screens=True should generate both asset_prompts and detail_prompts."""

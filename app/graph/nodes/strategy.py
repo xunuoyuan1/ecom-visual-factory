@@ -1,8 +1,9 @@
 from app.graph.state import ProductState
 from app.prompts.constants import SCREEN_FLOW
+from app.services import llm
 
 
-def visual_strategy(state: ProductState) -> dict:
+def _mock_visual_strategy(state: ProductState) -> dict:
     cleaned = state.get("cleaned_data", {})
     points = cleaned.get("selling_points", {})
     p1 = points.get("P1") or ["产品核心价值"]
@@ -30,3 +31,18 @@ def visual_strategy(state: ProductState) -> dict:
             "emotion": "可信、清晰、有购买确定性",
         }
     return {"strategy": strategy}
+
+
+def visual_strategy(state: ProductState) -> dict:
+    if llm.should_use_live_llm():
+        try:
+            return {"strategy": llm.generate_visual_strategy(state), "llm_mode_used": "live"}
+        except llm.LLMServiceError as exc:
+            errors = list(state.get("errors", []))
+            errors.append({"node": "strategy", "severity": "medium", "message": str(exc)})
+            result = _mock_visual_strategy(state)
+            result["errors"] = errors
+            result["llm_mode_used"] = "mock_fallback"
+            return result
+
+    return _mock_visual_strategy(state)
