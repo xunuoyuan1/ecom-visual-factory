@@ -80,6 +80,7 @@ h1 { font-size: 20px; }
 .image-upload-item .placeholder { width: 100%; height: 100px; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 24px; border-radius: 4px; background: #f8fafc; }
 .image-upload-item input[type="file"] { display: none; }
 .image-upload-item select { width: 100%; font-size: 10px; padding: 2px 4px; margin-top: 4px; border: 1px solid #d0d5dd; border-radius: 4px; }
+.image-upload-item .slot-label { font-size: 11px; font-weight: 600; color: #555; margin-bottom: 4px; text-align: center; }
 
 /* Asset type grid */
 .asset-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
@@ -190,12 +191,14 @@ h1 { font-size: 20px; }
     <textarea id="smartSpecs" rows="2" placeholder="容量:500ml&#10;材质:304不锈钢">容量:500ml&#10;材质:304不锈钢&#10;保温:12小时</textarea>
   </div>
   <div class="form-group" style="margin-bottom:6px">
-    <label>核心卖点 <button class="btn-sm" onclick="addSellingPoint('smart')" type="button">+</button></label>
-    <div id="smartSellingPoints"></div>
+    <label>核心卖点</label>
+    <textarea id="smartSellingPoints" rows="4" placeholder="请输入产品核心卖点，可用换行、逗号、顿号或句号分隔
+例如：316不锈钢内胆，安全耐用、12小时长效保温、食品级材质，无异味">316不锈钢内胆，安全耐用；12小时长效保温；食品级材质，无异味</textarea>
   </div>
   <div class="form-group" style="margin-bottom:6px">
     <label>产品图片 <button class="btn-sm" onclick="addImageSlot('smart')" type="button">+ 添加图片</button></label>
     <div class="image-upload-grid" id="smartImages"></div>
+    <div style="font-size:11px;color:#888;margin-top:4px">建议上传正面、侧面、背面图片，图片越完整，识别和生成效果越好。</div>
   </div>
   <div class="form-row" style="margin-top:8px">
     <div class="form-group">
@@ -270,12 +273,14 @@ h1 { font-size: 20px; }
     <textarea id="customSpecs" rows="2" placeholder="容量:500ml&#10;材质:304不锈钢">容量:500ml&#10;材质:304不锈钢&#10;保温:12小时</textarea>
   </div>
   <div class="form-group" style="margin-bottom:6px">
-    <label>核心卖点 <button class="btn-sm" onclick="addSellingPoint('custom')" type="button">+</button></label>
-    <div id="customSellingPoints"></div>
+    <label>核心卖点</label>
+    <textarea id="customSellingPoints" rows="4" placeholder="请输入产品核心卖点，可用换行、逗号、顿号或句号分隔
+例如：316不锈钢内胆，安全耐用、12小时长效保温、食品级材质，无异味">316不锈钢内胆，安全耐用；12小时长效保温；食品级材质，无异味</textarea>
   </div>
   <div class="form-group" style="margin-bottom:6px">
     <label>产品图片 <button class="btn-sm" onclick="addImageSlot('custom')" type="button">+ 添加图片</button></label>
     <div class="image-upload-grid" id="customImages"></div>
+    <div style="font-size:11px;color:#888;margin-top:4px">建议上传正面、侧面、背面图片，图片越完整，识别和生成效果越好。</div>
   </div>
   <div class="form-row" style="margin-top:8px">
     <div class="form-group">
@@ -344,14 +349,13 @@ let apiEndpoint = '/api/v1/generate';
 
 const ASSET_TYPES = ['主图','使用场景图','核心卖点图','细节微距图','尺寸参照图','竞品对比图','包装图','广告摄影图'];
 const PLATFORM_NAMES = {amazon:'Amazon',tiktok_shop:'TikTok Shop',shopee:'Shopee',temu:'Temu',lazada:'Lazada',jd:'京东',taobao:'淘宝',tmall:'天猫',alibaba:'阿里国际站'};
-const IMAGE_ROLES = ['正面','侧面','背面','俯视','45度','细节特写','包装','使用场景'];
+
 
 // --- Init ---
 window.addEventListener('DOMContentLoaded', () => {
   initImageSlots('smart', 3);
   initImageSlots('custom', 3);
-  initSellingPoints('smart', ['保温12小时','食品级304不锈钢','防漏设计']);
-  initSellingPoints('custom', ['保温12小时','食品级304不锈钢','防漏设计']);
+
   initAssetTypeGrid();
   onCustomPlatformChange();
   const p = document.getElementById('smartPlatform');
@@ -369,16 +373,16 @@ function initImageSlots(prefix, count) {
   else customImgCount = count;
 }
 
+const SLOT_LABELS = ['产品正面图', '产品侧面图', '产品背面图'];
+
 function createImageSlot(prefix, idx) {
   const div = document.createElement('div');
   div.className = 'image-upload-item';
+  const label = idx < 3 ? SLOT_LABELS[idx] : '';
   div.innerHTML = `
+    <div class="slot-label">${label}</div>
     <div class="placeholder" onclick="this.nextElementSibling.click()">📷</div>
     <input type="file" accept="image/*" onchange="handleImageUpload(this,'${prefix}_${idx}')">
-    <select onchange="updateImageRole('${prefix}',${idx},this.value)">
-      <option value="">选择角度</option>
-      ${IMAGE_ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
-    </select>
   `;
   return div;
 }
@@ -401,11 +405,6 @@ function handleImageUpload(input, id) {
   reader.readAsDataURL(file);
 }
 
-function updateImageRole(prefix, idx, val) {
-  const key = prefix + 'Roles';
-  if (!window[key]) window[key] = {};
-  window[key][idx] = val;
-}
 
 function addImageSlot(prefix) {
   const container = document.getElementById(prefix + 'Images');
@@ -422,29 +421,9 @@ function removeImageSlot(prefix, idx) {
   else customImgCount--;
 }
 
-// --- Selling Points ---
-function initSellingPoints(prefix, points) {
-  const container = document.getElementById(prefix + 'SellingPoints');
-  container.innerHTML = '';
-  points.forEach((p, i) => addSellingPointRow(prefix, p, i));
-}
 
-function addSellingPoint(prefix) {
-  const container = document.getElementById(prefix + 'SellingPoints');
-  const idx = container.children.length;
-  addSellingPointRow(prefix, '', idx);
-}
 
-function addSellingPointRow(prefix, val, idx) {
-  const container = document.getElementById(prefix + 'SellingPoints');
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;gap:6px;margin-bottom:4px';
-  row.innerHTML = `
-    <input type="text" placeholder="卖点 ${idx+1}" value="${val}" style="flex:1;padding:7px 9px;border:1px solid #d0d5dd;border-radius:6px;font-size:13px">
-    <button class="btn-danger" style="padding:4px 10px;font-size:14px;width:32px" onclick="this.parentElement.remove()" type="button">×</button>
-  `;
-  container.appendChild(row);
-}
+
 
 // --- Asset Type Grid ---
 function initAssetTypeGrid() {
@@ -508,6 +487,8 @@ function switchMode(m) {
 }
 
 // --- Generate ---
+const SLOT_ROLES = ['front', 'side', 'back'];
+
 function getImageData(prefix) {
   const container = document.getElementById(prefix + 'Images');
   const imgs = [];
@@ -516,16 +497,17 @@ function getImageData(prefix) {
     const img = item.querySelector('.preview');
     if (img && img.src) {
       imgs.push(img.src);
-      const sel = item.querySelector('select');
-      roles.push(sel ? sel.value : '');
+      roles.push(idx < 3 ? SLOT_ROLES[idx] : 'other');
     }
   });
   return { images: imgs, roles: roles };
 }
 
 function getSellingPoints(prefix) {
-  const container = document.getElementById(prefix + 'SellingPoints');
-  return Array.from(container.querySelectorAll('input[type="text"]')).map(i => i.value).filter(v => v.trim());
+  const ta = document.getElementById(prefix + 'SellingPoints');
+  return ta.value.split(/[\n,，、；;。]+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
 }
 
 async function generate() {
