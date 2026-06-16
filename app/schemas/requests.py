@@ -38,6 +38,18 @@ class GenerateRequest(BaseModel):
     constraints: GenerateConstraints = Field(default_factory=GenerateConstraints)
 
     def to_state(self) -> ProductState:
+        user_specs = dict(self.specs)
+        if self.brand:
+            user_specs.setdefault("brand", self.brand)
+        if self.product_type:
+            user_specs.setdefault("product_type", self.product_type)
+        if self.target_audience:
+            user_specs.setdefault("target_audience", self.target_audience)
+        if self.product_name:
+            user_specs.setdefault("product_name", self.product_name)
+        if self.target_market:
+            user_specs.setdefault("target_market", self.target_market)
+
         return {
             "job_id": uuid4().hex,
             "sku_id": self.sku_id,
@@ -48,7 +60,7 @@ class GenerateRequest(BaseModel):
             "target_audience": self.target_audience,
             "images": self.images,
             "image_roles": self.image_roles,
-            "user_specs": self.specs,
+            "user_specs": user_specs,
             "user_selling_points": self.selling_points,
             "asset_types_requested": [
                 {"type_name": a.type_name, "count": a.count}

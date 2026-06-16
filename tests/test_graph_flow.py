@@ -4,9 +4,26 @@ from app.graph.builder import build_graph
 from app.graph.nodes.prompt_revision import prompt_revision
 from app.graph.nodes.qa import qa_inspector, should_revise
 from app.prompts.constants import PRODUCT_FIDELITY_REQUIREMENT
+from app.schemas.requests import GenerateRequest
 
 
 class GraphFlowTests(unittest.TestCase):
+    def test_generate_request_merges_top_level_product_fields_into_specs(self):
+        request = GenerateRequest(
+            product_name="保温杯",
+            brand="Test",
+            product_type="家居",
+            target_audience="办公室人群",
+            selling_points=["保温", "便携", "防漏"],
+        )
+
+        state = request.to_state()
+
+        self.assertEqual(state["user_specs"]["brand"], "Test")
+        self.assertEqual(state["user_specs"]["product_type"], "家居")
+        self.assertEqual(state["user_specs"]["target_audience"], "办公室人群")
+        self.assertEqual(state["user_specs"]["product_name"], "保温杯")
+
     def test_incomplete_input_uses_completion_and_generates_seven_prompts(self):
         graph = build_graph()
         result = graph.invoke(
@@ -99,6 +116,43 @@ class GraphFlowTests(unittest.TestCase):
         self.assertIn("detail_prompts", result)
         self.assertEqual(len(result["detail_prompts"]), 7)
 
+    def test_top_level_product_fields_feed_detail_prompts(self):
+        graph = build_graph()
+        result = graph.invoke(
+            {
+                "job_id": "job-top-level-fields",
+                "sku_id": "sku-top-level-fields",
+                "product_name": "保温杯",
+                "brand": "Test",
+                "product_type": "家居",
+                "target_audience": "办公室人群",
+                "images": [],
+                "image_roles": [],
+                "user_specs": {
+                    "brand": "Test",
+                    "product_type": "家居",
+                    "target_audience": "办公室人群",
+                    "product_name": "保温杯",
+                },
+                "user_selling_points": ["保温", "便携", "防漏"],
+                "user_constraints": {
+                    "generation_mode": "smart_detail",
+                    "text_only_mode": True,
+                    "max_qa_iterations": 1,
+                },
+                "generation_mode": "smart_detail",
+                "include_detail_screens": False,
+                "iteration": 0,
+                "errors": [],
+            }
+        )
+
+        first_prompt = next(iter(result["detail_prompts"].values()))
+        self.assertEqual(result["cleaned_data"]["brand"]["value"], "Test")
+        self.assertEqual(result["cleaned_data"]["product_type"]["value"], "家居")
+        self.assertIn("主标题：Test家居", first_prompt)
+        self.assertNotIn("未识别品牌电商商品", first_prompt)
+
     def test_custom_assets_no_detail_skips_prompts(self):
         """custom_assets without include_detail_screens should not generate prompts or detail_prompts."""
         graph = build_graph()
@@ -121,6 +175,37 @@ class GraphFlowTests(unittest.TestCase):
         self.assertGreater(len(result.get("asset_plan", [])), 0)
         self.assertEqual(result.get("prompts", None), {})
         self.assertEqual(result.get("detail_prompts", None), {})
+
+    def test_custom_assets_image_generation_uses_asset_prompts(self):
+        graph = build_graph()
+        result = graph.invoke(
+            {
+                "job_id": "job-custom-image",
+                "sku_id": "sku-custom-image",
+                "product_name": "保温杯",
+                "images": [],
+                "image_roles": [],
+                "user_specs": {"brand": "Test", "product_type": "家居"},
+                "user_selling_points": ["保温", "便携", "防漏"],
+                "asset_types_requested": [{"type_name": "主图", "count": 1}],
+                "user_constraints": {
+                    "platform": "amazon",
+                    "generation_mode": "custom_assets",
+                    "include_detail_screens": False,
+                    "enable_image_generation": True,
+                    "text_only_mode": True,
+                    "max_qa_iterations": 1,
+                },
+                "generation_mode": "custom_assets",
+                "include_detail_screens": False,
+                "iteration": 0,
+                "errors": [],
+            }
+        )
+
+        self.assertEqual(result["detail_prompts"], {})
+        self.assertEqual(result["prompts"], {})
+        self.assertIn("asset:主图:1", result["generated_images"])
 
     def test_custom_assets_with_detail_screens_generates_both(self):
         """custom_assets + include_detail_screens=True should generate both asset_prompts and detail_prompts."""
