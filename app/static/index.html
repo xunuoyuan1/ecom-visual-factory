@@ -118,6 +118,10 @@ h1 { font-size: 20px; }
 
 .manual-review-badge { display: inline-block; background: #fef3c7; color: #92400e; font-size: 10px; padding: 2px 8px; border-radius: 10px; }
 </style>
+<style>
+.job-info-bar { display: none; font-size: 12px; color: #666; margin-bottom: 10px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; font-family: monospace; }
+.job-info-bar code { background: #e5e7eb; padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+.job-info-bar .job-status-label { margin-left: 14px; }
 </head>
 <body>
 <div class="container">
@@ -140,6 +144,11 @@ h1 { font-size: 20px; }
 
 <!-- Status Bar -->
 <div id="status" class="status-bar"></div>
+<div class="job-info-bar" id="jobInfoBar">
+  Job ID: <code id="jobIdDisplay"></code>
+  <span style="margin-left:14px">⏱ <span id="jobTimer">0</span>s</span>
+  <span class="job-status-label" id="jobStatusLabel">⏳ 排队中...</span>
+</div>
 
 <!-- Smart Detail Form -->
 <div class="card" id="smartFormFields">
@@ -349,7 +358,7 @@ h1 { font-size: 20px; }
 let mode = 'smart_detail';
 let smartImgCount = 3;
 let customImgCount = 3;
-let apiEndpoint = '/api/v1/generate';
+let apiEndpoint = '/api/v1/jobs';
 
 const ASSET_TYPES = ['主图','使用场景图','核心卖点图','细节微距图','尺寸参照图','竞品对比图','包装图','广告摄影图'];
 const PLATFORM_NAMES = {amazon:'Amazon',tiktok_shop:'TikTok Shop',shopee:'Shopee',temu:'Temu',lazada:'Lazada',jd:'京东',taobao:'淘宝',tmall:'天猫',alibaba:'阿里国际站'};
@@ -572,27 +581,54 @@ async function generate() {
       };
     }
 
-    const res = await fetch(apiEndpoint, {
+    // Create async job (prevents browser timeout)
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+    elapsedSeconds = 0;
+    currentJobId = null;
+
+    const createRes = await fetch('/api/v1/jobs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error('HTTP ' + res.status + ': ' + errText);
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      throw new Error('HTTP ' + createRes.status + ': ' + errText);
     }
+    const createData = await createRes.json();
+    currentJobId = createData.job_id;
 
-    const data = await res.json();
+    // Show job info
+    const jobInfoBar = document.getElementById('jobInfoBar');
+    const jobIdDisplay = document.getElementById('jobIdDisplay');
+    const jobTimer = document.getElementById('jobTimer');
+    const jobStatusLabel = document.getElementById('jobStatusLabel');
+    jobInfoBar.style.display = 'block';
+    jobIdDisplay.textContent = currentJobId;
+    jobTimer.textContent = '0';
+    jobStatusLabel.textContent = '⏳ 排队中...';
+
+    // Start elapsed timer
+    elapsedTimer = setInterval(() => {
+      elapsedSeconds++;
+      document.getElementById('jobTimer').textContent = elapsedSeconds;
+    }, 1000);
+
+    // Poll for completion
+    const result = await pollJob(currentJobId, jobStatusLabel);
+
     status.className = 'status-bar success';
-    status.innerHTML = '✅ 生成完成';
-    renderResult(data);
+    status.innerHTML = '✅ 生成完成（' + elapsedSeconds + 's）';
+    renderResult(result);
 
   } catch (err) {
     status.className = 'status-bar error';
-    status.innerHTML = '❌ ' + err.message;
+    status.innerHTML = '❌ ' + (err.message || '未知错误');
+    const jsl = document.getElementById('jobStatusLabel');
+    if (jsl) jsl.textContent = '❌ 失败';
   } finally {
     submitBtn.disabled = false;
+    if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
   }
 }
 
@@ -778,6 +814,36 @@ function copyPrompt(btn, key) {
 }
 
 let lastJsonData = null;
+let elapsedTimer = null;
+let elapsedSeconds = 0;
+let currentJobId = null;
+const JOB_POLL_INTERVAL = 2000;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function pollJob(jobId, labelEl) {
+  while (true) {
+    const res = await fetch('/api/v1/jobs/' + jobId);
+    if (!res.ok) throw new Error('Poll HTTP ' + res.status);
+    const data = await res.json();
+
+    if (data.status === 'succeeded') {
+      labelEl.textContent = '✅ 完成';
+      return data.result;
+    }
+    if (data.status === 'failed') {
+      labelEl.textContent = '❌ 失败';
+      throw new Error(data.error ? data.error.substring(0, 200) : 'Job failed');
+    }
+    if (data.status === 'running') {
+      labelEl.textContent = '⏳ 生成中（约需 1-2 分钟）...';
+    }
+
+    await sleep(JOB_POLL_INTERVAL);
+  }
+}
 
 function downloadJson() {
   if (!lastJsonData) return;
