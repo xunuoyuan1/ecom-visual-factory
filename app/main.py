@@ -16,6 +16,83 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/v1/examples")
+def get_examples() -> dict:
+    """Return example request bodies for reference."""
+    return {
+        "smart_detail": {
+            "product_name": "智能保温杯",
+            "brand": "METIS",
+            "product_type": "家居",
+            "target_market": "美国",
+            "selling_points": ["316不锈钢内胆", "12小时长效保温"],
+            "specs": {"text": "容量：500ml / 材质：316不锈钢"},
+            "constraints": {
+                "platform": "amazon",
+                "generation_mode": "smart_detail",
+                "enable_web_enhancement": False,
+                "enable_image_generation": False,
+            }
+        },
+        "custom_assets_detail": {
+            "product_name": "蓝牙耳机",
+            "brand": "SoundPro",
+            "product_type": "数码",
+            "target_market": "美国",
+            "selling_points": ["主动降噪", "续航40小时"],
+            "specs": {"text": "蓝牙5.3，IPX5防水"},
+            "asset_types": [
+                {"type_name": "主图", "count": 3},
+                {"type_name": "使用场景图", "count": 2},
+            ],
+            "constraints": {
+                "platform": "amazon",
+                "generation_mode": "custom_assets",
+                "include_detail_screens": True,
+                "enable_web_enhancement": False,
+                "enable_image_generation": False,
+            }
+        },
+        "custom_assets_no_detail": {
+            "product_name": "蓝牙耳机",
+            "brand": "SoundPro",
+            "product_type": "数码",
+            "target_market": "美国",
+            "selling_points": ["主动降噪", "续航40小时"],
+            "specs": {"text": "蓝牙5.3，IPX5防水"},
+            "asset_types": [
+                {"type_name": "主图", "count": 3},
+                {"type_name": "使用场景图", "count": 2},
+            ],
+            "constraints": {
+                "platform": "amazon",
+                "generation_mode": "custom_assets",
+                "include_detail_screens": False,
+                "enable_web_enhancement": False,
+                "enable_image_generation": False,
+            }
+        },
+        "hybrid": {
+            "product_name": "智能运动手环",
+            "brand": "FitTrack",
+            "product_type": "数码",
+            "target_market": "美国",
+            "selling_points": ["心率监测", "血氧检测", "IP68防水"],
+            "specs": {"text": "1.5寸AMOLED，续航14天"},
+            "asset_types": [
+                {"type_name": "主图", "count": 2},
+                {"type_name": "使用场景图", "count": 1},
+            ],
+            "constraints": {
+                "platform": "tmall",
+                "generation_mode": "hybrid",
+                "enable_web_enhancement": False,
+                "enable_image_generation": False,
+            }
+        }
+    }
+
+
 @app.get("/api/v1/platforms")
 def list_platforms() -> dict:
     """Return available platforms and their basic info (no image rules to keep response light)."""

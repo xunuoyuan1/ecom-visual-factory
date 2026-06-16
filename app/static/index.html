@@ -333,6 +333,10 @@ h1 { font-size: 20px; }
 <!-- Results -->
 <div id="result" class="card result-section" style="margin-top:14px">
   <h2>📊 生成结果</h2>
+  <div style="font-size:12px;color:#666;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn-copy" id="downloadJsonBtn" onclick="downloadJson()" style="font-size:12px;padding:5px 14px">⬇ 下载完整JSON</button>
+    <button class="btn-copy" id="copyAllPromptsBtn" onclick="copyAllDetailPrompts()" style="font-size:12px;padding:5px 14px;display:none">📋 复制全部7屏Prompt</button>
+  </div>
   <div class="meta-grid" id="resultMeta"></div>
   <div class="result-tabs" id="resultTabs"></div>
   <div id="resultContent"></div>
@@ -594,6 +598,7 @@ async function generate() {
 
 // --- Render ---
 function renderResult(data) {
+  lastJsonData = data;
   const resultDiv = document.getElementById('result');
   resultDiv.classList.add('visible');
 
@@ -634,6 +639,9 @@ function renderResult(data) {
   let content = {};
 
   // Detail prompts tab
+  // Show/hide "复制全部7屏" button
+  document.getElementById('copyAllPromptsBtn').style.display = hasDetail ? 'inline-block' : 'none';
+
   if (hasDetail) {
     tabs.push('7屏详情页');
     let html = '';
@@ -767,6 +775,49 @@ function copyPrompt(btn, key) {
   const parent = btn.closest('.prompt-card');
   const text = parent.querySelector('.prompt-body').textContent;
   copyText(btn, text);
+}
+
+let lastJsonData = null;
+
+function downloadJson() {
+  if (!lastJsonData) return;
+  const blob = new Blob([JSON.stringify(lastJsonData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (lastJsonData.sku_id || 'export') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  const btn = document.getElementById('downloadJsonBtn');
+  btn.innerHTML = '✅ 已下载';
+  setTimeout(() => { btn.innerHTML = '⬇ 下载完整JSON'; }, 2000);
+}
+
+function copyAllDetailPrompts() {
+  const dp = lastJsonData && (lastJsonData.detail_prompts || lastJsonData.prompts);
+  if (!dp) return;
+  let text = '';
+  Object.keys(dp).forEach(key => {
+    text += '=== ' + key + ' ===\n' + dp[key] + '\n\n';
+  });
+  const btn = document.getElementById('copyAllPromptsBtn');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text.trim()).then(() => {
+      btn.innerHTML = '✅ 已复制全部';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '📋 复制全部7屏Prompt'; }, 2000);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text.trim(); ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.innerHTML = '✅ 已复制全部';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '📋 复制全部7屏Prompt'; }, 2000);
+  }
 }
 
 function copyText(btn, text) {

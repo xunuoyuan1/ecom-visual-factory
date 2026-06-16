@@ -48,5 +48,8 @@ class ProductState(TypedDict, total=False):
     image_generation_status: dict[str, Any]
     qa_report: dict[str, Any]
 
+    vision_mode_used: str
+    llm_mode_used: str
+
     iteration: int
     errors: list[dict[str, Any]]
