@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from app.graph.builder import build_graph
 from app.graph.nodes.completion import ai_completion
+from app.graph.nodes.image_generation import image_generation
 from app.graph.nodes.prompt_generator import prompt_generator
 from app.graph.nodes.prompt_revision import prompt_revision
 from app.graph.nodes.qa import qa_inspector, should_revise
@@ -211,6 +212,51 @@ class GraphFlowTests(unittest.TestCase):
         self.assertEqual(result["detail_prompts"], {})
         self.assertEqual(result["prompts"], {})
         self.assertIn("asset:主图:1", result["generated_images"])
+
+    def test_image_generation_live_dispatches_with_limit(self):
+        state = {
+            "user_constraints": {"enable_image_generation": True},
+            "detail_prompts": {"screen_1": "detail prompt"},
+            "asset_prompts": {"主图": ["asset prompt 1", "asset prompt 2"]},
+            "errors": [],
+        }
+
+        fake_image = {
+            "id": "asset:主图:1",
+            "type": "asset",
+            "model": "gpt-image-2",
+            "size": "1024x1024",
+            "quality": "high",
+            "prompt": "asset prompt 1",
+            "b64_json": "abc",
+            "url": None,
+            "revised_prompt": None,
+            "error": None,
+        }
+        with patch("app.services.llm.should_use_live_llm", return_value=True), patch(
+            "app.services.llm.generate_image",
+            return_value=fake_image,
+        ) as generate_image:
+            result = image_generation(state)
+
+        self.assertLessEqual(len(result["generated_images"]), 2)
+        self.assertEqual(generate_image.call_count, 2)
+        self.assertTrue(result["image_generation_status"]["enabled"])
+        self.assertEqual(result["image_generation_status"]["mode"], "live")
+
+    def test_image_generation_enabled_without_live_returns_placeholders(self):
+        result = image_generation(
+            {
+                "user_constraints": {"enable_image_generation": True},
+                "detail_prompts": {},
+                "asset_prompts": {"主图": ["asset prompt"]},
+            }
+        )
+
+        self.assertEqual(result["image_generation_status"]["mode"], "mock_fallback")
+        self.assertEqual(result["image_generation_status"]["generated_count"], 0)
+        self.assertIn("asset:主图:1", result["generated_images"])
+        self.assertIsNotNone(result["generated_images"]["asset:主图:1"]["error"])
 
     def test_completion_live_failure_falls_back_to_mock(self):
         state = {

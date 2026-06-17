@@ -253,3 +253,40 @@ def generate_prompts(state: ProductState) -> dict[str, Any]:
         result["asset_prompts"] = asset_prompts
 
     return result
+
+
+def generate_image(prompt: str, image_id: str, image_type: str) -> dict[str, Any]:
+    try:
+        response = _client().images.generate(
+            model=settings.image_model,
+            prompt=prompt,
+            size=settings.image_size,
+            quality=settings.image_quality,
+            n=1,
+        )
+    except Exception as exc:
+        raise LLMServiceError(f"image generation failed for {image_id}: {exc}") from exc
+
+    data = getattr(response, "data", None)
+    if not data:
+        raise LLMServiceError(f"image generation returned no data for {image_id}")
+
+    first = data[0]
+    b64_json = getattr(first, "b64_json", None)
+    image_url = getattr(first, "url", None)
+    revised_prompt = getattr(first, "revised_prompt", None)
+    if not b64_json and not image_url:
+        raise LLMServiceError(f"image generation returned no image payload for {image_id}")
+
+    return {
+        "id": image_id,
+        "type": image_type,
+        "model": settings.image_model,
+        "size": settings.image_size,
+        "quality": settings.image_quality,
+        "prompt": prompt,
+        "b64_json": b64_json,
+        "url": image_url,
+        "revised_prompt": revised_prompt,
+        "error": None,
+    }

@@ -102,6 +102,15 @@ h1 { font-size: 20px; }
 .prompt-card .prompt-header .title { font-size: 12px; font-weight: 600; }
 .prompt-card .prompt-body { padding: 10px 12px; font-size: 12px; white-space: pre-wrap; line-height: 1.6; max-height: 300px; overflow-y: auto; }
 
+/* Generated images */
+.generated-image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.generated-image-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+.generated-image-card .image-title { padding: 8px 10px; font-size: 12px; font-weight: 700; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
+.generated-image-card img { width: 100%; display: block; background: #fff; }
+.generated-image-card .image-meta { padding: 8px 10px; font-size: 11px; color: #555; line-height: 1.5; }
+.generated-image-card .image-error { padding: 10px; color: #991b1b; background: #fef2f2; font-size: 12px; }
+.generated-image-card .image-actions { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid #e2e8f0; }
+
 /* Asset plan table */
 .asset-plan-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .asset-plan-table th, .asset-plan-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
@@ -664,12 +673,15 @@ function renderResult(data) {
   const detailPrompts = data.detail_prompts || data.prompts || {};
   const assetPrompts = data.asset_prompts || {};
   const assetPlan = data.asset_plan || [];
+  const generatedImages = data.generated_images || {};
+  const imageStatus = data.image_generation_status || {};
   const rules = data.platform_rules_applied || {};
   const qa = data.qa_report || { pass: true, issues: [], severity: { high: [], medium: [], low: [] } };
 
   const hasDetail = Object.keys(detailPrompts).length > 0;
   const hasAsset = assetPlan.length > 0;
   const hasAssetPrompts = Object.keys(assetPrompts).length > 0;
+  const hasGeneratedImages = Object.keys(generatedImages).length > 0;
 
   let tabs = [];
   let content = {};
@@ -731,6 +743,34 @@ function renderResult(data) {
       });
     });
     content['各类型Prompt'] = html;
+  }
+
+  // Generated Images tab
+  if (hasGeneratedImages) {
+    tabs.push('生成图片');
+    let html = `<p style="font-size:12px;color:#555;margin-bottom:8px">状态：${escapeHtml(imageStatus.message || '—')} · 成功 ${imageStatus.generated_count || 0}/${imageStatus.requested_count || Object.keys(generatedImages).length}</p>`;
+    html += '<div class="generated-image-grid">';
+    Object.keys(generatedImages).forEach(id => {
+      const img = generatedImages[id] || {};
+      const src = img.b64_json ? `data:image/png;base64,${img.b64_json}` : (img.url || '');
+      html += `<div class="generated-image-card">
+        <div class="image-title">${escapeHtml(id)}</div>`;
+      if (img.error) {
+        html += `<div class="image-error">${escapeHtml(img.error)}</div>`;
+      } else if (src) {
+        html += `<img src="${src}" alt="${escapeHtml(id)}">`;
+      } else {
+        html += `<div class="image-error">没有返回图片数据</div>`;
+      }
+      html += `<div class="image-meta">模型：${escapeHtml(img.model || '—')}<br>尺寸：${escapeHtml(img.size || '—')} · 质量：${escapeHtml(img.quality || '—')}</div>
+        <div class="image-actions">
+          <button class="btn-sm" onclick="copyText(this,'${escapeJsStr(img.prompt || '')}')">复制Prompt</button>
+          ${src ? `<a class="btn-sm" href="${src}" download="${escapeHtml(id).replace(/[:\\s]/g,'_')}.png" style="text-decoration:none;color:#111">下载图片</a>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    content['生成图片'] = html;
   }
 
   // Platform Rules tab

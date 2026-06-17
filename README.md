@@ -59,3 +59,22 @@ ENABLE_IMAGE_GENERATION=false
 ```
 
 当前 live 模式已接入 Vision 图片识别、信息补全、7 屏策略、Prompt 生成。Vision QA 和真实生图仍需后续接入；生图开关继续保持关闭，避免测试阶段产生图片生成成本。
+
+## 图片生成
+
+真实图片生成通过 `ENABLE_IMAGE_GENERATION` 单独控制。测试时建议先限制数量：
+
+```env
+ENABLE_IMAGE_GENERATION=true
+IMAGE_MODEL=gpt-image-2
+IMAGE_SIZE=1024x1024
+IMAGE_QUALITY=high
+IMAGE_GENERATION_TARGETS=asset,detail
+MAX_IMAGES_PER_REQUEST=2
+```
+
+`IMAGE_GENERATION_TARGETS` 可选：
+
+- `asset`：只生成自定义素材图。
+- `detail`：只生成 7 屏详情图。
+- `asset,detail`：两类都允许生成，但仍受 `MAX_IMAGES_PER_REQUEST` 限制。
