@@ -35,6 +35,10 @@ class TestCleanTrailingCommas(unittest.TestCase):
         s = '{"url":"https://example.com/a.png?foo=1&bar=2"}'
         self.assertEqual(_clean_trailing_commas(s), s)
 
+    def test_comma_before_brace_inside_string_unchanged(self):
+        s = '{"text":"keep this comma,} inside the string"}'
+        self.assertEqual(_clean_trailing_commas(s), s)
+
     def test_empty_object_array_unchanged(self):
         self.assertEqual(_clean_trailing_commas('{"a":{}}'), '{"a":{}}')
         self.assertEqual(_clean_trailing_commas('{"a":[]}'), '{"a":[]}')

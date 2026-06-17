@@ -244,7 +244,7 @@ class GraphFlowTests(unittest.TestCase):
         with patch("app.services.llm.should_use_live_llm", return_value=True), patch(
             "app.services.llm.generate_image",
             return_value=fake_image,
-        ) as generate_image:
+        ) as generate_image, patch("app.graph.nodes.image_generation.settings.max_images_per_request", 1):
             result = image_generation(state)
 
         # limited by MAX_IMAGES_PER_REQUEST=1

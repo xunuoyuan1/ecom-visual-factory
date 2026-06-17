@@ -80,6 +80,8 @@ def _clean_trailing_commas(text: str) -> str:
         i += 1
 
     return "".join(result)
+
+
 def _extract_json(text: str) -> dict[str, Any]:
     stripped = text.strip()
     if stripped.startswith("```"):
