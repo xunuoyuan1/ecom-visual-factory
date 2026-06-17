@@ -40,6 +40,46 @@ def _response_text(response: Any) -> str:
     raise LLMServiceError("OpenAI response did not include output text")
 
 
+def _clean_trailing_commas(text: str) -> str:
+    """Remove trailing commas before } or ] but only outside JSON string values."""
+    result: list[str] = []
+    in_string = False
+    escaped = False
+    i = 0
+
+    while i < len(text):
+        ch = text[i]
+
+        if escaped:
+            result.append(ch)
+            escaped = False
+            i += 1
+            continue
+
+        if ch == "\\" and in_string:
+            result.append(ch)
+            escaped = True
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = not in_string
+            result.append(ch)
+            i += 1
+            continue
+
+        if ch == "," and not in_string:
+            j = i + 1
+            while j < len(text) and text[j].isspace():
+                j += 1
+            if j < len(text) and text[j] in "}]":
+                i += 1
+                continue
+
+        result.append(ch)
+        i += 1
+
+    return "".join(result)
 def _extract_json(text: str) -> dict[str, Any]:
     stripped = text.strip()
     if stripped.startswith("```"):
@@ -54,7 +94,7 @@ def _extract_json(text: str) -> dict[str, Any]:
         end = stripped.rfind("}")
         if start == -1 or end == -1 or end <= start:
             raise LLMServiceError("LLM response did not contain JSON")
-        value = json.loads(stripped[start : end + 1])
+        value = json.loads(_clean_trailing_commas(stripped[start : end + 1]))
 
     if not isinstance(value, dict):
         raise LLMServiceError("LLM JSON response must be an object")

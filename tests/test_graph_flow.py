@@ -14,6 +14,14 @@ from app.services.llm import LLMServiceError
 
 
 class GraphFlowTests(unittest.TestCase):
+
+    def setUp(self):
+        self._mock_live = patch("app.services.llm.should_use_live_llm", return_value=False)
+        self._mock_live.start()
+
+    def tearDown(self):
+        self._mock_live.stop()
+
     def test_generate_request_merges_top_level_product_fields_into_specs(self):
         request = GenerateRequest(
             product_name="保温杯",
@@ -239,8 +247,10 @@ class GraphFlowTests(unittest.TestCase):
         ) as generate_image:
             result = image_generation(state)
 
-        self.assertLessEqual(len(result["generated_images"]), 2)
-        self.assertEqual(generate_image.call_count, 2)
+        # limited by MAX_IMAGES_PER_REQUEST=1
+        self.assertLessEqual(len(result["generated_images"]), 1)
+        # limited by MAX_IMAGES_PER_REQUEST=1
+        self.assertEqual(generate_image.call_count, 1)
         self.assertTrue(result["image_generation_status"]["enabled"])
         self.assertEqual(result["image_generation_status"]["mode"], "live")
 
