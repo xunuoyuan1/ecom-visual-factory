@@ -37,6 +37,17 @@ class GraphFlowTests(unittest.TestCase):
         self.assertEqual(state["user_specs"]["product_type"], "家居")
         self.assertEqual(state["user_specs"]["target_audience"], "办公室人群")
         self.assertEqual(state["user_specs"]["product_name"], "保温杯")
+        self.assertEqual(state["output_language"], "中文")
+        self.assertEqual(state["user_specs"]["output_language"], "中文")
+
+    def test_generate_request_infers_and_overrides_output_language(self):
+        default_state = GenerateRequest(target_market="拉美").to_state()
+        override_state = GenerateRequest(target_market="美国", output_language="Spanish").to_state()
+
+        self.assertEqual(default_state["output_language"], "Spanish")
+        self.assertEqual(default_state["user_specs"]["output_language"], "Spanish")
+        self.assertEqual(override_state["output_language"], "Spanish")
+        self.assertEqual(override_state["user_specs"]["output_language"], "Spanish")
 
     def test_incomplete_input_uses_completion_and_generates_seven_prompts(self):
         graph = build_graph()
@@ -139,6 +150,7 @@ class GraphFlowTests(unittest.TestCase):
                 "product_name": "保温杯",
                 "brand": "Test",
                 "product_type": "家居",
+                "output_language": "English",
                 "target_audience": "办公室人群",
                 "images": [],
                 "image_roles": [],
@@ -164,6 +176,8 @@ class GraphFlowTests(unittest.TestCase):
         first_prompt = next(iter(result["detail_prompts"].values()))
         self.assertEqual(result["cleaned_data"]["brand"]["value"], "Test")
         self.assertEqual(result["cleaned_data"]["product_type"]["value"], "家居")
+        self.assertEqual(result["output_language"], "English")
+        self.assertIn("画面文字语言：English", first_prompt)
         self.assertIn("主标题：Test家居", first_prompt)
         self.assertNotIn("未识别品牌电商商品", first_prompt)
 

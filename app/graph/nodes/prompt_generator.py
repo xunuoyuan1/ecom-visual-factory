@@ -11,6 +11,7 @@ def _build_detail_prompts(state: ProductState) -> dict[str, str]:
     strategy = state.get("strategy", {})
     brand = cleaned.get("brand", {}).get("value") or "产品"
     product_type = cleaned.get("product_type", {}).get("value") or "商品"
+    output_language = state.get("output_language") or "中文"
 
     # Use aspect_ratio from user_constraints, default to "2:3"
     aspect_ratio = (
@@ -23,6 +24,8 @@ def _build_detail_prompts(state: ProductState) -> dict[str, str]:
         title = f"{brand}{product_type}"
         subtitle = plan["core_selling_point"]
         detail_prompts[screen_key] = (
+            f"画面文字语言：{output_language}。所有出现在图片中的主标题、副标题、卖点文案、标签和屏幕 UI 文案必须使用该语言；"
+            "如下面文案不是该语言，请先重写为该语言再用于画面。\n"
             f"主标题：{title}\n"
             f"副标题：{subtitle}\n"
             f"屏幕目标：{plan['screen_goal']}\n"
@@ -60,6 +63,7 @@ def _build_asset_prompts(state: ProductState) -> dict[str, list[str]]:
     platform_rules = PLATFORM_RULES.get(platform_key, {})
 
     image_rules = platform_rules.get("image_rules", {})
+    output_language = state.get("output_language") or "中文"
 
     requested_types = state.get("asset_types_requested", [])
     if not requested_types:
@@ -81,6 +85,7 @@ def _build_asset_prompts(state: ProductState) -> dict[str, list[str]]:
                 f"[{type_name}] ({platform_rules.get('name', platform_key)}) "
                 f"{type_rules.get('recommended', '1200x1200')} "
                 f"{type_rules.get('aspect_ratio', '1:1')} "
+                f"画面文字语言：{output_language}，所有可见文字必须使用该语言。"
                 f"产品描述：{state.get('product_name', '待填产品')} - 第{n+1}张",
             )
             for n in range(actual_count)

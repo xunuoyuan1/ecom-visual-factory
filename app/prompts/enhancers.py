@@ -30,10 +30,12 @@ def is_screen_product(state: ProductState) -> bool:
 def screen_ui_guidance(state: ProductState, asset_type: str) -> str:
     if not is_screen_product(state):
         return ""
+    output_language = state.get("output_language") or "中文"
 
     base = (
         "屏幕显示策略：产品屏幕必须点亮，显示通用非品牌化运动健康仪表盘 UI，"
         "可包含时间、步数、心率趋势线、运动记录、消息提醒等轻量图标；"
+        f"屏幕 UI 上的所有可见文字必须使用 {output_language}；"
         "UI 现代清晰，不遮挡圆角矩形屏幕结构；不得出现 Apple、Apple Watch、任何品牌 Logo，"
         "不得出现医疗诊断、FDA、clinical、100% accurate、血压精确诊断等暗示。"
     )

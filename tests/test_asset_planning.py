@@ -185,6 +185,7 @@ class AssetPlanningTests(unittest.TestCase):
             "user_constraints": {"platform": "amazon"},
             "product_name": "测血压手表",
             "product_type": "电子产品",
+            "output_language": "English",
             "user_selling_points": ["运动记录", "消息提醒"],
             "asset_types_requested": [{"type_name": "主图", "count": 1}],
         })
@@ -193,6 +194,8 @@ class AssetPlanningTests(unittest.TestCase):
 
         self.assertIn("屏幕必须点亮", prompt)
         self.assertIn("通用非品牌化", prompt)
+        self.assertIn("画面文字语言：English", prompt)
+        self.assertIn("屏幕 UI 上的所有可见文字必须使用 English", prompt)
         self.assertIn("Amazon 合规白底", prompt)
         self.assertIn("避免死板黑屏", prompt)
         self.assertIn("不得出现 Apple", prompt)

@@ -167,6 +167,7 @@ def parse_product_images(state: ProductState) -> dict[str, Any]:
         "brand_from_user": state.get("brand", ""),
         "product_type_from_user": state.get("product_type", ""),
         "target_market": state.get("target_market", ""),
+        "output_language": state.get("output_language", ""),
         "user_specs": state.get("user_specs", {}),
         "user_selling_points": state.get("user_selling_points", []),
         "image_roles": state.get("image_roles", []),
@@ -206,6 +207,7 @@ def complete_product_data(state: ProductState) -> dict[str, Any]:
         "missing_fields": state.get("missing_fields", []),
         "product_name": state.get("product_name", ""),
         "target_market": state.get("target_market", ""),
+        "output_language": state.get("output_language", ""),
         "user_selling_points": state.get("user_selling_points", []),
     }
     data = _json_call(settings.reasoning_model, system_prompt, payload)
@@ -226,6 +228,7 @@ def generate_visual_strategy(state: ProductState) -> dict[str, Any]:
         "cleaned_data": state.get("cleaned_data", {}),
         "market_data": state.get("market_data", {}),
         "target_market": state.get("target_market", ""),
+        "output_language": state.get("output_language", ""),
         "screen_flow": SCREEN_FLOW,
     }
     data = _json_call(settings.reasoning_model, system_prompt, payload)
@@ -245,7 +248,9 @@ def generate_prompts(state: ProductState) -> dict[str, Any]:
         "你是顶级电商视觉导演和 AI 提示词工程师。根据 generation_mode 生成 Prompt。"
         "detail_prompts 用 screen_1 到 screen_7；asset_prompts 按素材类型输出字符串数组。"
         "7屏详情页和单图素材必须分开字段，平台主图规则只应用于对应素材类型，不得污染7屏详情页。"
-        "每条详情页 Prompt 必须包含中文主标题、副标题、布局、光影、字体、情绪、产品保真约束。"
+        "每条详情页 Prompt 必须包含主标题、副标题、布局、光影、字体、情绪、产品保真约束。"
+        "所有生成图片中出现的可见文字，包括主标题、副标题、卖点文案、标签、按钮和屏幕 UI 文案，必须使用 output_language 指定语言。"
+        "Prompt 说明本身可以中文，但画面可见文字必须匹配 output_language；例如 output_language=English 时，不要生成中文标题文案。"
         "如果产品是智能手表、智能屏幕设备或电子屏产品，asset_prompts 必须要求屏幕点亮并显示通用非品牌化 UI，"
         "可包含时间、步数、心率趋势、运动记录、消息提醒等；不得出现 Apple、Apple Watch、任何品牌 Logo、"
         "医疗诊断、FDA、clinical、100% accurate 或血压精确诊断。"
@@ -263,6 +268,7 @@ def generate_prompts(state: ProductState) -> dict[str, Any]:
         "platform_rules_applied": state.get("platform_rules_applied", {}),
         "user_constraints": state.get("user_constraints", {}),
         "target_market": state.get("target_market", ""),
+        "output_language": state.get("output_language", ""),
     }
     data = _json_call(settings.reasoning_model, system_prompt, payload)
     result: dict[str, Any] = {}

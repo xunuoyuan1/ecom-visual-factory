@@ -28,6 +28,7 @@ class GenerateRequest(BaseModel):
     brand: str = ""
     product_type: str = ""
     target_market: str = "中国大陆"
+    output_language: str = ""
     target_audience: str = ""
     sku_id: str = Field(default_factory=lambda: f"SKU-{uuid4().hex[:8]}")
     images: list[str] = Field(default_factory=list)
@@ -49,6 +50,9 @@ class GenerateRequest(BaseModel):
             user_specs.setdefault("product_name", self.product_name)
         if self.target_market:
             user_specs.setdefault("target_market", self.target_market)
+        output_language = self.output_language or infer_default_language(self.target_market)
+        if output_language:
+            user_specs.setdefault("output_language", output_language)
 
         return {
             "job_id": uuid4().hex,
@@ -57,6 +61,7 @@ class GenerateRequest(BaseModel):
             "brand": self.brand,
             "product_type": self.product_type,
             "target_market": self.target_market,
+            "output_language": output_language,
             "target_audience": self.target_audience,
             "images": self.images,
             "image_roles": self.image_roles,
@@ -76,3 +81,20 @@ class GenerateRequest(BaseModel):
 
 class BatchGenerateRequest(BaseModel):
     items: list[GenerateRequest]
+
+
+def infer_default_language(target_market: str) -> str:
+    mapping = {
+        "美国": "English",
+        "欧洲": "English",
+        "日韩": "Japanese",
+        "日本": "Japanese",
+        "韩国": "Korean",
+        "东南亚": "English",
+        "南美": "Spanish",
+        "拉美": "Spanish",
+        "中东": "Arabic",
+        "中国大陆": "中文",
+        "其他": "English",
+    }
+    return mapping.get(target_market, "English")

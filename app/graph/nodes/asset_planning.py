@@ -101,6 +101,7 @@ def asset_planning(state: ProductState) -> dict:
 
     # Generate mock asset_prompts
     asset_prompts = {}
+    output_language = state.get("output_language") or "中文"
     for item in asset_plan:
         t = item["type"]
         if t == "7屏详情页":
@@ -113,6 +114,7 @@ def asset_planning(state: ProductState) -> dict:
                 f"[{t}] ({platform_rules.get('name', platform_key)}) "
                 f"{item.get('recommended_resolution', '高分辨率')} "
                 f"{item.get('aspect_ratio', '1:1')} "
+                f"画面文字语言：{output_language}，所有可见文字必须使用该语言。"
                 f"产品描述：{state.get('product_name', '待填产品')} - 第{n+1}张",
             )
             for n in range(c)

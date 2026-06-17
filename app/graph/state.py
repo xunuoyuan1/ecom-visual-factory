@@ -10,6 +10,7 @@ class ProductState(TypedDict, total=False):
     brand: str
     product_type: str
     target_market: str
+    output_language: str
     target_audience: str
 
     images: list[str]
