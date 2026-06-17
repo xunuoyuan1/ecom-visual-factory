@@ -1,6 +1,7 @@
 from app.graph.state import ProductState
 from app.prompts.constants import SCREEN_FLOW
 from app.data.platform_rules import PLATFORM_RULES, ASSET_TYPES
+from app.prompts.enhancers import enhance_asset_prompt
 from app.services import llm
 
 
@@ -74,10 +75,14 @@ def _build_asset_prompts(state: ProductState) -> dict[str, list[str]]:
         actual_count = min(count, type_rules.get("max_count", 999))
 
         asset_prompts[type_name] = [
-            f"[{type_name}] ({platform_rules.get('name', platform_key)}) "
-            f"{type_rules.get('recommended', '1200x1200')} "
-            f"{type_rules.get('aspect_ratio', '1:1')} "
-            f"产品描述：{state.get('product_name', '待填产品')} - 第{n+1}张"
+            enhance_asset_prompt(
+                state,
+                type_name,
+                f"[{type_name}] ({platform_rules.get('name', platform_key)}) "
+                f"{type_rules.get('recommended', '1200x1200')} "
+                f"{type_rules.get('aspect_ratio', '1:1')} "
+                f"产品描述：{state.get('product_name', '待填产品')} - 第{n+1}张",
+            )
             for n in range(actual_count)
         ]
     return asset_prompts

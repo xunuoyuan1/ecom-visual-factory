@@ -179,6 +179,38 @@ class AssetPlanningTests(unittest.TestCase):
         self.assertGreater(len(result["asset_plan"]), 0)
         self.assertIn("主图", result["asset_prompts"])
 
+    def test_screen_product_main_image_prompt_requires_lit_generic_ui(self):
+        result = asset_planning({
+            "generation_mode": "custom_assets",
+            "user_constraints": {"platform": "amazon"},
+            "product_name": "测血压手表",
+            "product_type": "电子产品",
+            "user_selling_points": ["运动记录", "消息提醒"],
+            "asset_types_requested": [{"type_name": "主图", "count": 1}],
+        })
+
+        prompt = result["asset_prompts"]["主图"][0]
+
+        self.assertIn("屏幕必须点亮", prompt)
+        self.assertIn("通用非品牌化", prompt)
+        self.assertIn("Amazon 合规白底", prompt)
+        self.assertIn("避免死板黑屏", prompt)
+        self.assertIn("不得出现 Apple", prompt)
+
+    def test_non_screen_product_prompt_is_not_forced_to_lit_ui(self):
+        result = asset_planning({
+            "generation_mode": "custom_assets",
+            "user_constraints": {"platform": "amazon"},
+            "product_name": "陶瓷马克杯",
+            "product_type": "家居百货",
+            "asset_types_requested": [{"type_name": "主图", "count": 1}],
+        })
+
+        prompt = result["asset_prompts"]["主图"][0]
+
+        self.assertNotIn("屏幕必须点亮", prompt)
+        self.assertNotIn("通用非品牌化", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

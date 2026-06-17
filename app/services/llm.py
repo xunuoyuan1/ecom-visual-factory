@@ -204,6 +204,11 @@ def generate_prompts(state: ProductState) -> dict[str, Any]:
         "detail_prompts 用 screen_1 到 screen_7；asset_prompts 按素材类型输出字符串数组。"
         "7屏详情页和单图素材必须分开字段，平台主图规则只应用于对应素材类型，不得污染7屏详情页。"
         "每条详情页 Prompt 必须包含中文主标题、副标题、布局、光影、字体、情绪、产品保真约束。"
+        "如果产品是智能手表、智能屏幕设备或电子屏产品，asset_prompts 必须要求屏幕点亮并显示通用非品牌化 UI，"
+        "可包含时间、步数、心率趋势、运动记录、消息提醒等；不得出现 Apple、Apple Watch、任何品牌 Logo、"
+        "医疗诊断、FDA、clinical、100% accurate 或血压精确诊断。"
+        "主图仍遵守平台合规边界，但要通过屏幕 UI、棚拍高光、轻微 3/4 角度提升质感；"
+        "场景图和广告图要更有生活方式与科技感，不要只做平铺白底。"
         "输出 JSON 对象，可包含 detail_prompts, prompts, asset_prompts。"
     )
     payload = {

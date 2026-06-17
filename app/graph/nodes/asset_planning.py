@@ -2,6 +2,7 @@
 
 from app.data.platform_rules import PLATFORM_RULES, ASSET_TYPES
 from app.graph.state import ProductState
+from app.prompts.enhancers import enhance_asset_prompt
 
 
 def asset_planning(state: ProductState) -> dict:
@@ -106,10 +107,14 @@ def asset_planning(state: ProductState) -> dict:
             continue  # Uses existing prompts field
         c = item.get("count", 1)
         asset_prompts[t] = [
-            f"[{t}] ({platform_rules.get('name', platform_key)}) "
-            f"{item.get('recommended_resolution', '高分辨率')} "
-            f"{item.get('aspect_ratio', '1:1')} "
-            f"产品描述：{state.get('product_name', '待填产品')} - 第{n+1}张"
+            enhance_asset_prompt(
+                state,
+                t,
+                f"[{t}] ({platform_rules.get('name', platform_key)}) "
+                f"{item.get('recommended_resolution', '高分辨率')} "
+                f"{item.get('aspect_ratio', '1:1')} "
+                f"产品描述：{state.get('product_name', '待填产品')} - 第{n+1}张",
+            )
             for n in range(c)
         ]
 
